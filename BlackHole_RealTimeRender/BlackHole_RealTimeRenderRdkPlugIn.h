@@ -4,12 +4,19 @@
 #pragma once
 
 // CBlackHole_RealTimeRenderRdkRenderPlugIn
-// See BlackHole_RealTimeRenderRdkPlugIn.cpp for the implementation of this class.
+// 该类的实现请参见 BlackHole_RealTimeRenderRdkPlugIn.cpp
 //
 
 class CBlackHole_RealTimeRenderRdkPlugIn : public CRhRdkRenderPlugIn
 {
 public:
+	// ==========================  【我的代码】  =============================
+
+	virtual unsigned int RenderCapabilities() const;
+	virtual GUID RenderEngineId() const;
+
+	// ==========================  【我的代码】  =============================
+
 	CBlackHole_RealTimeRenderRdkPlugIn() = default;
 
 	virtual bool Initialize() override;
@@ -21,10 +28,11 @@ public:
 
 	CRhinoPlugIn& RhinoPlugIn() const override;
 
+
 protected:
 	virtual void RegisterExtensions() const override;
 
-	// Preview renderers
+	// 预览渲染器
 	virtual bool CreatePreview(const ON_2iSize& sizeImage, RhRdkPreviewQuality quality, const IRhRdkPreviewSceneServer* pSceneServer, IRhRdkPreviewCallbacks* pNotify, CRhinoDib& dibOut) override;
 	virtual bool CreatePreview(const ON_2iSize& sizeImage, const CRhRdkTexture& texture, CRhinoDib& dibOut) override;
 

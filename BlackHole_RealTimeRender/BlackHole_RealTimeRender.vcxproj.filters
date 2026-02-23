@@ -13,6 +13,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="MyComponents">
+      <UniqueIdentifier>{1341e8e0-9787-46d3-a065-3b99f090b8f2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="BlackHole_RealTimeRenderApp.cpp">
@@ -25,6 +28,21 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="cmdBlackHole_RealTimeRender.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="BlackHole_RealTimeRenderRdkPlugIn.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="BlackHole_RealTimeRenderEventWatcher.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="BlackHole_RealTimeRenderMaterial.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="BlackHole_RealTimeRenderMaterialSection.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="BlackHole_RealTimeRenderSdkRender.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -44,6 +62,21 @@
     <ClInclude Include="targetver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="BlackHole_RealTimeRenderRdkPlugIn.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="BlackHole_RealTimeRenderEventWatcher.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="BlackHole_RealTimeRenderMaterial.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="BlackHole_RealTimeRenderMaterialSection.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="BlackHole_RealTimeRenderSdkRender.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="BlackHole_RealTimeRender.def">
@@ -52,11 +85,6 @@
     <None Include="res\BlackHole_RealTimeRender.rc2">
       <Filter>Resource Files</Filter>
     </None>
-  </ItemGroup>
-  <ItemGroup>
-    <Midl Include="BlackHole_RealTimeRender.idl">
-      <Filter>Source Files</Filter>
-    </Midl>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="BlackHole_RealTimeRender.rc">

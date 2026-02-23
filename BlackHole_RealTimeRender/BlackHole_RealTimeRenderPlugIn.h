@@ -1,5 +1,5 @@
-// BlackHole_RealTimeRenderPlugIn.h : main header file for the BlackHole_RealTimeRender plug-in.
-//
+// BlackHole_RealTimeRenderPlugIn.h : BlackHole_RealTimeRender 插件的主要头文件。
+// 
 
 #pragma once
 
@@ -8,89 +8,76 @@
 class CBlackHole_RealTimeRenderRdkPlugIn;
 
 // CBlackHole_RealTimeRenderPlugIn
-// See BlackHole_RealTimeRenderPlugIn.cpp for the implementation of this class
+// 请参阅 BlackHole_RealTimeRenderPlugIn.cpp 了解此类的实现
 //
 
 class CBlackHole_RealTimeRenderPlugIn : public CRhinoRenderPlugIn
 {
 public:
-  // CBlackHole_RealTimeRenderPlugIn constructor. The constructor is called when the
-  // plug-in is loaded and "thePlugIn" is constructed. Once the plug-in
-  // is loaded, CBlackHole_RealTimeRenderPlugIn::OnLoadPlugIn() is called. The
-  // constructor should be simple and solid. Do anything that might fail in
-  // CBlackHole_RealTimeRenderPlugIn::OnLoadPlugIn().
-  CBlackHole_RealTimeRenderPlugIn();
-  
-  // CBlackHole_RealTimeRenderPlugIn destructor. The destructor is called to destroy
-  // "thePlugIn" when the plug-in is unloaded. Immediately before the
-  // DLL is unloaded, CBlackHole_RealTimeRenderPlugIn::OnUnloadPlugin() is called. Do
-  // not do too much here. Be sure to clean up any memory you have allocated
-  // with onmalloc(), onrealloc(), oncalloc(), or onstrdup().
-  ~CBlackHole_RealTimeRenderPlugIn() = default;
+    // CBlackHole_RealTimeRenderPlugIn 构造函数。插件加载时调用该构造函数，
+    // 并构造“thePlugIn”。插件加载后会调用 CBlackHole_RealTimeRenderPlugIn::OnLoadPlugIn()。
+    // 构造函数应该简单、稳定。任何可能失败的操作应该放在 CBlackHole_RealTimeRenderPlugIn::OnLoadPlugIn() 中。
+    CBlackHole_RealTimeRenderPlugIn();
 
-  // Required overrides
-  
-  // Plug-in name display string. This name is displayed by Rhino when
-  // loading the plug-in, in the plug-in help menu, and in the Rhino
-  // interface for managing plug-ins. 
-  const wchar_t* PlugInName() const override;
-  
-  // Plug-in version display string. This name is displayed by Rhino
-  // when loading the plug-in and in the Rhino interface for 
-  // managing plug-ins.
-  const wchar_t* PlugInVersion() const override;
-  
-  // Plug-in unique identifier. The identifier is used by Rhino for
-  // managing plug-ins.
-  GUID PlugInID() const override;
-  
-  // Additional overrides
-  
-  // Called after the plug-in is loaded and the constructor has been
-  // run. This is a good place to perform any significant initialization,
-  // license checking, and so on.  This function must return TRUE for
-  // the plug-in to continue to load.  
-  BOOL OnLoadPlugIn() override;
-  
-  // Called one time when plug-in is about to be unloaded. By this time,
-  // Rhino's mainframe window has been destroyed, and some of the SDK
-  // managers have been deleted. There is also no active document or active
-  // view at this time. Thus, you should only be manipulating your own objects.
-  // or tools here.  
-  void OnUnloadPlugIn() override;
+    // CBlackHole_RealTimeRenderPlugIn 析构函数。插件卸载时调用该析构函数销毁
+    // "thePlugIn"。在 DLL 卸载之前会调用 CBlackHole_RealTimeRenderPlugIn::OnUnloadPlugin()。
+    // 不要做太多工作。在这里清理你通过 onmalloc()、onrealloc()、oncalloc() 或 onstrdup() 分配的内存。
+    ~CBlackHole_RealTimeRenderPlugIn() = default;
 
-  // Render overrides
-  CRhinoCommand::result Render(const CRhinoCommandContext& context, bool bPreview) override;
-  CRhinoCommand::result RenderWindow(
-    const CRhinoCommandContext& context, 
-    bool render_preview, 
-    CRhinoView* view, 
-    const LPRECT rect, 
-    bool bInWindow, 
-    bool bBlowUp
+    // 必须重写的函数
+
+    // 插件名称显示字符串。该名称在 Rhino 加载插件时、
+    // 插件帮助菜单中，以及 Rhino 插件管理界面中显示。 
+    const wchar_t* PlugInName() const override;
+
+    // 插件版本显示字符串。该字符串在 Rhino 加载插件时
+    // 以及 Rhino 插件管理界面中显示。
+    const wchar_t* PlugInVersion() const override;
+
+    // 插件唯一标识符。该标识符由 Rhino 用于管理插件。
+    GUID PlugInID() const override;
+
+    // 其他重写的函数
+
+    // 插件加载后，构造函数运行时调用此函数。
+    // 这是执行任何重要初始化、许可证检查等操作的好地方。
+    // 此函数必须返回 TRUE 插件才会继续加载。  
+    BOOL OnLoadPlugIn() override;
+
+    // 插件即将卸载时调用一次。在此时，
+    // Rhino 的主框架窗口已经销毁，并且一些 SDK 管理器已经被删除。
+    // 此时也没有活动文档或活动视图，因此这里只能操作你自己的对象或工具。  
+    void OnUnloadPlugIn() override;
+
+    // 渲染相关重写
+    CRhinoCommand::result Render(const CRhinoCommandContext& context, bool bPreview) override;
+    CRhinoCommand::result RenderWindow(
+        const CRhinoCommandContext& context,
+        bool render_preview,
+        CRhinoView* view,
+        const LPRECT rect,
+        bool bInWindow,
+        bool bBlowUp
     ) override;
 
-  BOOL SaveRenderedImage(ON_wString filename) override;
-  BOOL CloseRenderWindow() override;
+    BOOL SaveRenderedImage(ON_wString filename) override;
+    BOOL CloseRenderWindow() override;
 
-  // Render methods
-  CRhinoCommand::result RenderQuiet( const CRhinoCommandContext& context, bool bPreview);
-  BOOL SceneChanged() const;
-  void SetSceneChanged(BOOL bChanged);
-  BOOL LightingChanged() const;
-  void SetLightingChanged(BOOL bChanged);
-  UINT MainFrameResourceID() const;
+    // 渲染方法
+    CRhinoCommand::result RenderQuiet(const CRhinoCommandContext& context, bool bPreview);
+    BOOL SceneChanged() const;
+    void SetSceneChanged(BOOL bChanged);
+    BOOL LightingChanged() const;
+    void SetLightingChanged(BOOL bChanged);
+    UINT MainFrameResourceID() const;
 
 private:
-  ON_wString m_plugin_version;
-  CBlackHole_RealTimeRenderEventWatcher m_event_watcher;
-  CBlackHole_RealTimeRenderRdkPlugIn* m_pRdkPlugIn;
+    ON_wString m_plugin_version;
+    CBlackHole_RealTimeRenderEventWatcher m_event_watcher;
+    CBlackHole_RealTimeRenderRdkPlugIn* m_pRdkPlugIn;
 
-  // TODO: Add additional class information here
+    // TODO：在这里添加额外的类信息
 };
 
-// Return a reference to the one and only CBlackHole_RealTimeRenderPlugIn object
+// 返回唯一的 CBlackHole_RealTimeRenderPlugIn 对象的引用
 CBlackHole_RealTimeRenderPlugIn& BlackHole_RealTimeRenderPlugIn();
-
-
-
