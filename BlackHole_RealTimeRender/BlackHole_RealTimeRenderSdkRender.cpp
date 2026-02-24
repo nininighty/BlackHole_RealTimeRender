@@ -1,5 +1,12 @@
 // BlackHole_RealTimeRenderSdkRender.cpp
 //
+// 这个文件是 Rhino 调用你渲染器的核心入口。
+// 主要负责：
+// 1 初始化渲染
+// 2 获取场景 mesh
+// 3 启动渲染线程
+// 4 逐像素计算并写入 Rhino 渲染窗口
+//
 
 #include "stdafx.h"
 #include "BlackHole_RealTimeRenderSdkRender.h"
@@ -11,23 +18,31 @@ CBlackHole_RealTimeRenderSdkRender::CBlackHole_RealTimeRenderSdkRender(
 	const ON_wString& sCaption,
 	UINT id,
 	bool bPreview
-	)
+)
 	: CRhRdkSdkRender(context, plugin, sCaption, id)
 {
+	// 是否快速渲染（Rhino 小窗口预览模式）
 	m_bRenderQuick = bPreview;
+
+	// 是否取消渲染
 	m_bCancel = false;
+
+	// Rhino 模态渲染控制
 	m_bContinueModal = true;
+
 	m_hRenderThread = NULL;
+
+	// 清空已有通道
 	GetRenderWindow().ClearChannels();
 
-	// TODO: Add any extra channels before the rendering starts.
-
-	// e.g., This adds a Z_buffer channel which allows things like Fog and DOF post effects to work.
+	// 在渲染开始之前添加额外通道
+	// 例如深度通道，雾效 / 景深等后期需要
 	GetRenderWindow().AddChannel(IRhRdkRenderWindow::chanDistanceFromCamera, sizeof(float));
 }
 
 CBlackHole_RealTimeRenderSdkRender::~CBlackHole_RealTimeRenderSdkRender()
 {
+	// 析构时必须等待渲染线程结束
 	if (m_hRenderThread != NULL)
 	{
 		::WaitForSingleObject(m_hRenderThread, INFINITE);
@@ -41,21 +56,24 @@ CRhinoSdkRender::RenderReturnCodes CBlackHole_RealTimeRenderSdkRender::Render(co
 	if (!::RhRdkIsAvailable())
 		return CRhinoSdkRender::render_error_starting_render;
 
+	// 获取当前视口
 	const ON_Viewport& vp = RhinoApp().ActiveView()->ActiveViewport().VP();
 
-	// Force render meshes to be created on the main thread.
+	// 强制在主线程创建 Render Mesh
+	// Rhino 内部对象（NURBS / SubD）最终都会转换成 Mesh 给渲染器
 	IRhRdkSdkRenderMeshIterator* pIterator = NewRenderMeshIterator(vp);
 	pIterator->EnsureRenderMeshesCreated();
 
-	// You can now use this Iterator to get all of the meshes in the scene.
-	// While the iterator is around, all meshes are guaranteed to be available
-	// which means you don't need to copy them during the rendering process.
-
+	// 遍历场景中的所有 mesh
+	// 这里通常用于：
+	// 构建 BVH
+	// 转换 mesh
+	// 上传 GPU
 	CRhRdkRenderMesh rm;
 	pIterator->Reset();
 	while (pIterator->Next(rm))
 	{
-		// TODO: Use the mesh.
+		// TODO: 在这里处理 mesh
 	}
 
 	CRhinoSdkRender::RenderReturnCodes rc = CRhRdkSdkRender::Render(sizeRender);
@@ -65,7 +83,10 @@ CRhinoSdkRender::RenderReturnCodes CBlackHole_RealTimeRenderSdkRender::Render(co
 	return rc;
 }
 
-CRhinoSdkRender::RenderReturnCodes CBlackHole_RealTimeRenderSdkRender::RenderWindow(CRhinoView* pView, const LPRECT pRect, bool bInPopupWindow)
+CRhinoSdkRender::RenderReturnCodes CBlackHole_RealTimeRenderSdkRender::RenderWindow(
+	CRhinoView* pView,
+	const LPRECT pRect,
+	bool bInPopupWindow)
 {
 	if (!::RhRdkIsAvailable())
 		return CRhinoSdkRender::render_error_starting_render;
@@ -78,42 +99,30 @@ CRhinoSdkRender::RenderReturnCodes CBlackHole_RealTimeRenderSdkRender::RenderWin
 
 	const ON_Viewport& vp = pView->ActiveViewport().VP();
 
-	// Force render meshes to be created on the main thread.
+	// 创建 render mesh
 	IRhRdkSdkRenderMeshIterator* pIterator = NewRenderMeshIterator(vp);
 	pIterator->EnsureRenderMeshesCreated();
-
-	// You can now use this Iterator to get all of the meshes in the scene.
-	// While the iterator is around, all meshes are guaranteed to be available
-	// which means you don't need to copy them during the rendering process.
 
 	CRhRdkRenderMesh rm;
 	pIterator->Reset();
 	while (pIterator->Next(rm))
 	{
-		// TODO: Use the mesh.  This might be the point you create your acceleration structure
-		// or, if you are writing a renderer that uses its own mesh representation, you might do the
-		// conversion here.
-		// One thing to remember - the IRhRdkSdkRenderMeshIterator::Next function is not, at this time,
-		// thread safe, so please don't pass the iterator's pointer into multiple render threads and use
-		// it to query the mesh list.  In any case, it's not really optimized for in-render access.
+		// TODO
+		// 这里通常构建加速结构 BVH
+		// 注意：这个迭代器不是线程安全的
 	}
 
 	CRhinoSdkRender::RenderReturnCodes rc;
 
 	if (bInPopupWindow)
 	{
-		// Rendering the specified region in a normal popup window.
-
-		// This method gives roughly a region-sized frame.
+		// 在弹出窗口渲染
 		const ON_4iRect rect(pRect->left, pRect->top, pRect->right, pRect->bottom);
 		rc = __super::Render(rect.Size());
-
-		// This method gives a normal-sized frame with a region-sized rendered area inside it.
-//		rc = CRhRdkSdkRender::Render(sizeRender);
 	}
 	else
 	{
-		// Rendering directly into the viewport.
+		// 在 Rhino 视口实时渲染
 		rc = __super::RenderWindow(pView, pRect, bInPopupWindow);
 	}
 
@@ -124,11 +133,13 @@ CRhinoSdkRender::RenderReturnCodes CBlackHole_RealTimeRenderSdkRender::RenderWin
 
 BOOL CBlackHole_RealTimeRenderSdkRender::NeedToProcessGeometryTable()
 {
+	// 如果场景改变，需要重新构建
 	return ::BlackHole_RealTimeRenderPlugIn().SceneChanged();
 }
 
 BOOL CBlackHole_RealTimeRenderSdkRender::NeedToProcessLightTable()
 {
+	// 如果光照改变
 	return ::BlackHole_RealTimeRenderPlugIn().LightingChanged();
 }
 
@@ -150,26 +161,27 @@ void CBlackHole_RealTimeRenderSdkRender::SetContinueModal(bool b)
 	m_bContinueModal = b;
 }
 
-void CBlackHole_RealTimeRenderSdkRender::RenderThread(void* pv) // Static.
+void CBlackHole_RealTimeRenderSdkRender::RenderThread(void* pv)
 {
+	// 线程入口
 	reinterpret_cast<CBlackHole_RealTimeRenderSdkRender*>(pv)->ThreadedRender();
 }
 
 void CBlackHole_RealTimeRenderSdkRender::StartRendering()
 {
+	// 创建渲染线程
 	m_hRenderThread = ::CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)RenderThread, this, 0, NULL);
 }
 
 BOOL CBlackHole_RealTimeRenderSdkRender::StartRenderingInWindow(CRhinoView*, const LPCRECT)
 {
 	m_hRenderThread = ::CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)RenderThread, this, 0, NULL);
-
 	return TRUE;
 }
 
 void CBlackHole_RealTimeRenderSdkRender::StopRendering()
 {
-	// If rendering is in progress, cancel it and wait for it to stop.
+	// 停止渲染
 	if (NULL != m_hRenderThread)
 	{
 		m_bCancel = true;
@@ -180,11 +192,18 @@ void CBlackHole_RealTimeRenderSdkRender::StopRendering()
 	}
 }
 
-static void CalculatePixel(int x, int y, const ON_2iSize& sizeRender, CRhRdkColor& colOut, float& zOut, bool bFast);
+static void CalculatePixel(
+	int x,
+	int y,
+	const ON_2iSize& sizeRender,
+	CRhRdkColor& colOut,
+	float& zOut,
+	bool bFast);
 
 int CBlackHole_RealTimeRenderSdkRender::ThreadedRender(void)
 {
-	// TODO: Replace this with your own rendering code.
+	// 真正的渲染入口（核心）
+	// 未来你的黑洞光线追踪就在这里
 
 	m_bCancel = false;
 
@@ -198,20 +217,25 @@ int CBlackHole_RealTimeRenderSdkRender::ThreadedRender(void)
 
 	IRhRdkRenderWindow& renderWnd = GetRenderWindow();
 
-	// Set the render window size.
+	// 设置渲染尺寸
 	renderWnd.SetSize(sizeRender);
 
-	// Open the RGBA channel. This may be all you need.
-	IRhRdkRenderWindow::IChannel* pChanRGBA = renderWnd.OpenChannel(IRhRdkRenderWindow::chanRGBA);
+	// 打开颜色通道
+	IRhRdkRenderWindow::IChannel* pChanRGBA =
+		renderWnd.OpenChannel(IRhRdkRenderWindow::chanRGBA);
+
 	if (nullptr != pChanRGBA)
 	{
-		// Optionally open another channel; in this case the Z buffer or distance from camera.
-		IRhRdkRenderWindow::IChannel* pChanZ = renderWnd.OpenChannel(IRhRdkRenderWindow::chanDistanceFromCamera);
+		// 打开深度通道
+		IRhRdkRenderWindow::IChannel* pChanZ =
+			renderWnd.OpenChannel(IRhRdkRenderWindow::chanDistanceFromCamera);
+
 		if (nullptr != pChanZ)
 		{
 			float z = 0.0f;
 			CRhRdkColor col;
 
+			// 遍历每个像素
 			for (int y = 0; y < sizeRender.cy; y++)
 			{
 				for (int x = 0; x < sizeRender.cx; x++)
@@ -222,10 +246,10 @@ int CBlackHole_RealTimeRenderSdkRender::ThreadedRender(void)
 						break;
 
 					pChanRGBA->SetValue(x, y, ComponentOrder::RGBA, col.FloatArray());
-
 					pChanZ->SetValue(x, y, ComponentOrder::Irrelevant, &z);
 				}
 
+				// 刷新这一行
 				rect.top = y;
 				rect.bottom = y + 1;
 				renderWnd.InvalidateArea(rect);
@@ -237,32 +261,68 @@ int CBlackHole_RealTimeRenderSdkRender::ThreadedRender(void)
 		pChanRGBA->Close();
 	}
 
-	// This must be the last thing the thread does.
+	// 通知 Rhino 渲染结束
 	SetContinueModal(false);
 
 	return 0;
 }
 
-// Fake shading functions for demo purposes.
 
-void CalcCore(int x, int y, float w, float h, double x1, double y1, float& r, float& g, float& b, float& a, float& z)
+// ===============================
+// 以下是示例着色函数（假的渲染）
+// ===============================
+
+void CalcCore(
+	int x,
+	int y,
+	float w,
+	float h,
+	double x1,
+	double y1,
+	float& r,
+	float& g,
+	float& b,
+	float& a,
+	float& z)
 {
-	const float k = min(w, h) * 0.5f, radius = k * 0.8f;
-	float rr = 0.05f, gg = 0.25f, bb = 0.6f, aa = 0.0f, zz = 0.0f;
+	const float k = min(w, h) * 0.5f;
+	const float radius = k * 0.8f;
+
+	float rr = 0.05f;
+	float gg = 0.25f;
+	float bb = 0.6f;
+	float aa = 0.0f;
+	float zz = 0.0f;
+
 	const float dist = (float)sqrt((double)(x1 * x1) + (double)(y1 * y1));
+
 	if (dist < radius)
 	{
-		bb = x / w; bb *= bb;
-		rr = y / h; rr *= rr;
+		bb = x / w;
+		bb *= bb;
+
+		rr = y / h;
+		rr *= rr;
+
 		zz = 1.0f - (dist / k);
 		aa = 1.0f;
 		gg = zz * 0.68f;
 	}
 
-	r += rr; g += gg; b += bb; a += aa; z += zz;
+	r += rr;
+	g += gg;
+	b += bb;
+	a += aa;
+	z += zz;
 }
 
-static void CalculatePixel(int x, int y, const ON_2iSize& sizeRender, CRhRdkColor& colOut, float& zOut, bool bFast)
+static void CalculatePixel(
+	int x,
+	int y,
+	const ON_2iSize& sizeRender,
+	CRhRdkColor& colOut,
+	float& zOut,
+	bool bFast)
 {
 	const float w = (float)sizeRender.cx;
 	const float h = (float)sizeRender.cy;
@@ -272,7 +332,11 @@ static void CalculatePixel(int x, int y, const ON_2iSize& sizeRender, CRhRdkColo
 
 	int samples = 0;
 
-	float r = 0.0f, g = 0.0f, b = 0.0f, a = 0.0f, z = 0.0f;
+	float r = 0.0f;
+	float g = 0.0f;
+	float b = 0.0f;
+	float a = 0.0f;
+	float z = 0.0f;
 
 	if (bFast)
 	{
@@ -282,14 +346,17 @@ static void CalculatePixel(int x, int y, const ON_2iSize& sizeRender, CRhRdkColo
 		samples++;
 	}
 	else
-	for (float s = -0.5f; s < 0.5001f; s += 0.0625f)
 	{
-		for (float t = -0.5f; t < 0.5001f; t += 0.0625f)
+		// 超采样
+		for (float s = -0.5f; s < 0.5001f; s += 0.0625f)
 		{
-			const double x1 = midX - x + s;
-			const double y1 = midY - y + t;
-			CalcCore(x, y, w, h, x1, y1, r, g, b, a, z);
-			samples++;
+			for (float t = -0.5f; t < 0.5001f; t += 0.0625f)
+			{
+				const double x1 = midX - x + s;
+				const double y1 = midY - y + t;
+				CalcCore(x, y, w, h, x1, y1, r, g, b, a, z);
+				samples++;
+			}
 		}
 	}
 

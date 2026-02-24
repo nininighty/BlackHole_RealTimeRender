@@ -11,6 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="BlackHole_RealtimeEngine.cpp" />
     <ClCompile Include="cmdBlackHole_RealTimeRender.cpp" />
     <ClCompile Include="BlackHole_RealTimeRenderApp.cpp" />
     <ClCompile Include="BlackHole_RealTimeRenderPlugIn.cpp" />
@@ -25,6 +26,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="BlackHole_RealtimeEngine.h" />
     <ClInclude Include="BlackHole_RealTimeRenderApp.h" />
     <ClInclude Include="BlackHole_RealTimeRenderPlugIn.h" />
     <ClInclude Include="BlackHole_RealTimeRenderRdkPlugIn.h" />
