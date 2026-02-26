@@ -89,9 +89,13 @@ bool CBlackHole_RealTimeRenderRdkPlugIn::SupportsFeature(const UUID& uuidFeature
 /////////////////////////////////////////////////////////////////////////////
 // 实时渲染支持（手动添加）
 
-// 这行代码的效果与调用枚举完全一致，但绝不会报“域问题”
+//RenderCapabilities : 向 Rhino 软件“递交名片”，声明你的插件具备哪些高级渲染能力。
 unsigned int CBlackHole_RealTimeRenderRdkPlugIn::RenderCapabilities() const {
-	return 1; // 1 代表 CanDoRealtimeRender
+	// 只要 stdafx.h 里有 RhRdkHeaders.h，下面这些常量就是全局可见的
+	return (unsigned int)(
+		IRhRdkRenderPlugIn::CanDoRealtimeRender |
+		IRhRdkRenderPlugIn::CanDoCustomDisplayModes
+		);
 }
 
 GUID CBlackHole_RealTimeRenderRdkPlugIn::RenderEngineId() const{

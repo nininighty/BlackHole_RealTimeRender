@@ -3,51 +3,39 @@
   <ItemGroup>
     <Filter Include="Source Files">
       <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
     </Filter>
     <Filter Include="Header Files">
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
     </Filter>
     <Filter Include="Resource Files">
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="___MyComponents__">
-      <UniqueIdentifier>{1341e8e0-9787-46d3-a065-3b99f090b8f2}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="BlackHole_RealTimeRenderApp.cpp">
+    <ClCompile Include="SampleRdkRendererApp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="BlackHole_RealTimeRenderPlugIn.cpp">
+    <ClCompile Include="SampleRdkRendererPlugIn.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="cmdBlackHole_RealTimeRender.cpp">
+    <ClCompile Include="SampleRdkRendererRdkPlugIn.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="BlackHole_RealTimeRenderRdkPlugIn.cpp">
+    <ClCompile Include="SampleRdkRendererEventWatcher.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="BlackHole_RealTimeRenderEventWatcher.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="BlackHole_RealTimeRenderMaterial.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="BlackHole_RealTimeRenderMaterialSection.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="BlackHole_RealTimeRenderSdkRender.cpp">
+    <ClCompile Include="SampleRdkRendererSdkRender.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="BlackHole_RealTimeRenderApp.h">
+    <ClInclude Include="SampleRdkRendererApp.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="stdafx.h">
@@ -56,44 +44,36 @@
     <ClInclude Include="Resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="BlackHole_RealTimeRenderPlugIn.h">
+    <ClInclude Include="SampleRdkRendererPlugIn.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="targetver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="BlackHole_RealTimeRenderRdkPlugIn.h">
+    <ClInclude Include="SampleRdkRendererRdkPlugIn.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="BlackHole_RealTimeRenderEventWatcher.h">
+    <ClInclude Include="SampleRdkRendererEventWatcher.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="BlackHole_RealTimeRenderMaterial.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="BlackHole_RealTimeRenderMaterialSection.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="BlackHole_RealTimeRenderSdkRender.h">
+    <ClInclude Include="SampleRdkRendererSdkRender.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="BlackHole_RealTimeRender.def">
+    <None Include="SampleRdkRenderer.def">
       <Filter>Source Files</Filter>
     </None>
-    <None Include="res\BlackHole_RealTimeRender.rc2">
+    <None Include="res\SampleRdkRenderer.rc2">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="res\SampleRdkRenderer.ico">
       <Filter>Resource Files</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="BlackHole_RealTimeRender.rc">
+    <ResourceCompile Include="SampleRdkRenderer.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <Image Include="res\BlackHole_RealTimeRender.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
   </ItemGroup>
 </Project>

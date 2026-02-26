@@ -1,5 +1,5 @@
-<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
@@ -11,46 +11,38 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="cmdBlackHole_RealTimeRender.cpp" />
-    <ClCompile Include="BlackHole_RealTimeRenderApp.cpp" />
-    <ClCompile Include="BlackHole_RealTimeRenderPlugIn.cpp" />
-    <ClCompile Include="BlackHole_RealTimeRenderRdkPlugIn.cpp" />
-    <ClCompile Include="BlackHole_RealTimeRenderEventWatcher.cpp" />
-    <ClCompile Include="BlackHole_RealTimeRenderMaterial.cpp" />
-    <ClCompile Include="BlackHole_RealTimeRenderMaterialSection.cpp" />
-    <ClCompile Include="BlackHole_RealTimeRenderSdkRender.cpp" />
+    <ClCompile Include="SampleRdkRendererApp.cpp" />
+    <ClCompile Include="SampleRdkRendererEventWatcher.cpp" />
+    <ClCompile Include="SampleRdkRendererPlugIn.cpp" />
+    <ClCompile Include="SampleRdkRendererRdkPlugIn.cpp" />
+    <ClCompile Include="SampleRdkRendererSdkRender.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="BlackHole_RealTimeRenderApp.h" />
-    <ClInclude Include="BlackHole_RealTimeRenderPlugIn.h" />
-    <ClInclude Include="BlackHole_RealTimeRenderRdkPlugIn.h" />
-    <ClInclude Include="BlackHole_RealTimeRenderEventWatcher.h" />
-    <ClInclude Include="BlackHole_RealTimeRenderMaterial.h" />
-    <ClInclude Include="BlackHole_RealTimeRenderMaterialSection.h" />
-    <ClInclude Include="BlackHole_RealTimeRenderSdkRender.h" />
     <ClInclude Include="Resource.h" />
+    <ClInclude Include="SampleRdkRendererApp.h" />
+    <ClInclude Include="SampleRdkRendererEventWatcher.h" />
+    <ClInclude Include="SampleRdkRendererPlugIn.h" />
+    <ClInclude Include="SampleRdkRendererRdkPlugIn.h" />
+    <ClInclude Include="SampleRdkRendererSdkRender.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="BlackHole_RealTimeRender.def" />
-    <None Include="res\BlackHole_RealTimeRender.rc2" />
+    <None Include="res\SampleRdkRenderer.ico" />
+    <None Include="res\SampleRdkRenderer.rc2" />
+    <None Include="SampleRdkRenderer.def" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="BlackHole_RealTimeRender.rc" />
-  </ItemGroup>
-  <ItemGroup>
-    <Image Include="res\BlackHole_RealTimeRender.ico" />
+    <ResourceCompile Include="SampleRdkRenderer.rc" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>MFCDLLProj</Keyword>
+    <ProjectGuid>{61FB7653-1897-45E1-9146-894D68963107}</ProjectGuid>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
-    <ProjectGuid>{190BB61B-25C9-42DE-AF3C-B18DD2813F87}</ProjectGuid>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
@@ -70,11 +62,10 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
-  <ImportGroup Label="Shared">
-  </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <RhinoSdkPath>$([MSBuild]::GetRegistryValueFromView('HKEY_LOCAL_MACHINE\SOFTWARE\McNeel\Rhinoceros\SDK\8.0', 'InstallPath', null, RegistryView.Registry64))</RhinoSdkPath>
+    <RhinoSdkVersion>8.0</RhinoSdkVersion>
+    <RhinoSdkPath>$([MSBuild]::GetRegistryValueFromView('HKEY_LOCAL_MACHINE\SOFTWARE\McNeel\Rhinoceros\SDK\$(RhinoSdkVersion)', 'InstallPath', null, RegistryView.Registry64))</RhinoSdkPath>
   </PropertyGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -96,7 +87,6 @@
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN64;_WINDOWS;NDEBUG;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <SDLCheck>true</SDLCheck>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -120,7 +110,6 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN64;_WINDOWS;NDEBUG;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <SDLCheck>true</SDLCheck>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
