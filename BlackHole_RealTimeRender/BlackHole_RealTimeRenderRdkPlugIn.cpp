@@ -1,4 +1,4 @@
-// BlackHole_RealTimeRenderRdkPlugIn.cpp
+ï»¿// BlackHole_RealTimeRenderRdkPlugIn.cpp
 //
 
 #include "stdafx.h"
@@ -18,14 +18,14 @@ CRhinoPlugIn& CBlackHole_RealTimeRenderRdkPlugIn::RhinoPlugIn() const
 
 bool CBlackHole_RealTimeRenderRdkPlugIn::Initialize()
 {
-	// TODO£º³õÊ¼»¯ÄãµÄ²å¼ş¡£Èç¹û³õÊ¼»¯Ê§°Ü£¬Çë·µ»Ø false¡£
+	// TODOï¼šåˆå§‹åŒ–ä½ çš„æ’ä»¶ã€‚å¦‚æœåˆå§‹åŒ–å¤±è´¥ï¼Œè¯·è¿”å› falseã€‚
 
 	return __super::Initialize();
 }
 
 void CBlackHole_RealTimeRenderRdkPlugIn::Uninitialize()
 {
-	// TODO£ºÔÚÕâÀïÖ´ĞĞ²å¼şĞèÒªµÄÇåÀí¹¤×÷¡£
+	// TODOï¼šåœ¨è¿™é‡Œæ‰§è¡Œæ’ä»¶éœ€è¦çš„æ¸…ç†å·¥ä½œã€‚
 
 	__super::Uninitialize();
 }
@@ -34,19 +34,19 @@ void CBlackHole_RealTimeRenderRdkPlugIn::RegisterExtensions() const
 {
 	AddExtension(new CBlackHole_RealTimeRenderMaterialFactory);
 
-	// TODO£ºÔÚÕâÀï¼ÌĞøÌí¼Ó²ÄÖÊ / »·¾³ / ÎÆÀí ¹¤³§¡£
+	// TODOï¼šåœ¨è¿™é‡Œç»§ç»­æ·»åŠ æè´¨ / ç¯å¢ƒ / çº¹ç† å·¥å‚ã€‚
 
 	__super::RegisterExtensions();
 }
 
 void CBlackHole_RealTimeRenderRdkPlugIn::AbortRender()
 {
-	// TODO£ºÔÚÕâÀïÊµÏÖÖĞÖ¹äÖÈ¾µÄÂß¼­¡£
+	// TODOï¼šåœ¨è¿™é‡Œå®ç°ä¸­æ­¢æ¸²æŸ“çš„é€»è¾‘ã€‚
 }
 
 bool CBlackHole_RealTimeRenderRdkPlugIn::CreatePreview(const ON_2iSize& sizeImage, RhRdkPreviewQuality quality, const IRhRdkPreviewSceneServer* pSceneServer, IRhRdkPreviewCallbacks* pNotify, CRhinoDib& dibOut)
 {
-	// TODO£ºÒÔÖ¸¶¨³ß´çºÍÖÊÁ¿£¬Îªµ±Ç°³¡¾°Éú³ÉÒ»¸öäÖÈ¾Ô¤ÀÀÍ¼¡£
+	// TODOï¼šä»¥æŒ‡å®šå°ºå¯¸å’Œè´¨é‡ï¼Œä¸ºå½“å‰åœºæ™¯ç”Ÿæˆä¸€ä¸ªæ¸²æŸ“é¢„è§ˆå›¾ã€‚
 	UNREFERENCED_PARAMETER(sizeImage);
 	UNREFERENCED_PARAMETER(quality);
 	UNREFERENCED_PARAMETER(pSceneServer);
@@ -58,8 +58,8 @@ bool CBlackHole_RealTimeRenderRdkPlugIn::CreatePreview(const ON_2iSize& sizeImag
 
 bool CBlackHole_RealTimeRenderRdkPlugIn::CreatePreview(const ON_2iSize& sizeImage, const CRhRdkTexture& texture, CRhinoDib& dibOut)
 {
-	// TODO£º¿ÉÑ¡µØÎªÎÆÀíÉú³ÉÔ¤ÀÀÍ¼¡£
-	// Èç¹û·µ»Ø false£¬ÔòÓÉ RDK ×Ô¶¯Éú³ÉËùÓĞÎÆÀíÔ¤ÀÀ¡£
+	// TODOï¼šå¯é€‰åœ°ä¸ºçº¹ç†ç”Ÿæˆé¢„è§ˆå›¾ã€‚
+	// å¦‚æœè¿”å› falseï¼Œåˆ™ç”± RDK è‡ªåŠ¨ç”Ÿæˆæ‰€æœ‰çº¹ç†é¢„è§ˆã€‚
 	UNREFERENCED_PARAMETER(sizeImage);
 	UNREFERENCED_PARAMETER(texture);
 	UNREFERENCED_PARAMETER(dibOut);
@@ -69,36 +69,19 @@ bool CBlackHole_RealTimeRenderRdkPlugIn::CreatePreview(const ON_2iSize& sizeImag
 
 bool CBlackHole_RealTimeRenderRdkPlugIn::SupportsFeature(const UUID& uuidFeature) const
 {
-	// TODO£º¾ö¶¨ÔÚµ±Ç°äÖÈ¾Æ÷ÏÂ£¬RDK µÄÄÄĞ©¹¦ÄÜÊÇ¿ÉÓÃµÄ¡£
+	// TODOï¼šå†³å®šåœ¨å½“å‰æ¸²æŸ“å™¨ä¸‹ï¼ŒRDK çš„å“ªäº›åŠŸèƒ½æ˜¯å¯ç”¨çš„ã€‚
 
 	if (uuidFeature == uuidFeatureCustomRenderMeshes)
-		return true; // ¸ÃäÖÈ¾Æ÷Ö§³Ö×Ô¶¨ÒåäÖÈ¾Íø¸ñ£¨ÒòÎªÊ¹ÓÃÁËµü´úÆ÷£©¡£
+		return true; // è¯¥æ¸²æŸ“å™¨æ”¯æŒè‡ªå®šä¹‰æ¸²æŸ“ç½‘æ ¼ï¼ˆå› ä¸ºä½¿ç”¨äº†è¿­ä»£å™¨ï¼‰ã€‚
 
 	if (uuidFeature == uuidFeatureDecals)
-		return false; // ¸ÃäÖÈ¾Æ÷²»Ö§³ÖÌù»¨£¨Decal£©¡£
+		return false; // è¯¥æ¸²æŸ“å™¨ä¸æ”¯æŒè´´èŠ±ï¼ˆDecalï¼‰ã€‚
 
 	if (uuidFeature == uuidFeatureGroundPlane)
-		return false; // ¸ÃäÖÈ¾Æ÷²»Ö§³ÖµØÃæÆ½Ãæ¡£
+		return false; // è¯¥æ¸²æŸ“å™¨ä¸æ”¯æŒåœ°é¢å¹³é¢ã€‚
 
 	if (uuidFeature == uuidFeatureSun)
-		return false; // ¸ÃäÖÈ¾Æ÷²»Ö§³ÖÌ«Ñô¹âÔ´¡£
+		return false; // è¯¥æ¸²æŸ“å™¨ä¸æ”¯æŒå¤ªé˜³å…‰æºã€‚
 
 	return true;
-}
-
-/////////////////////////////////////////////////////////////////////////////
-// ÊµÊ±äÖÈ¾Ö§³Ö£¨ÊÖ¶¯Ìí¼Ó£©
-
-//RenderCapabilities : Ïò Rhino Èí¼ş¡°µİ½»ÃûÆ¬¡±£¬ÉùÃ÷ÄãµÄ²å¼ş¾ß±¸ÄÄĞ©¸ß¼¶äÖÈ¾ÄÜÁ¦¡£
-unsigned int CBlackHole_RealTimeRenderRdkPlugIn::RenderCapabilities() const {
-	// Ö»Òª stdafx.h ÀïÓĞ RhRdkHeaders.h£¬ÏÂÃæÕâĞ©³£Á¿¾ÍÊÇÈ«¾Ö¿É¼ûµÄ
-	return (unsigned int)(
-		IRhRdkRenderPlugIn::CanDoRealtimeRender |
-		IRhRdkRenderPlugIn::CanDoCustomDisplayModes
-		);
-}
-
-GUID CBlackHole_RealTimeRenderRdkPlugIn::RenderEngineId() const{
-	// È·±£µ÷ÓÃÖ÷²å¼şµÄ ID
-	return ::BlackHole_RealTimeRenderPlugIn().PlugInID();
 }

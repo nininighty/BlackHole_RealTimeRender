@@ -12,9 +12,6 @@ class CBlackHole_RealTimeRenderRdkPlugIn : public CRhRdkRenderPlugIn
 public:
 	// ==========================  【我的代码】  =============================
 
-	virtual unsigned int RenderCapabilities() const;
-	virtual GUID RenderEngineId() const;
-
 	// ==========================  【我的代码】  =============================
 
 	CBlackHole_RealTimeRenderRdkPlugIn() = default;

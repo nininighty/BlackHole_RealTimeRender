@@ -1,8 +1,5 @@
 // BlackHole_RealTimeRenderPlugIn.h : BlackHole_RealTimeRender 插件的主要头文件。
-// 
-
 #pragma once
-
 #include "BlackHole_RealTimeRenderEventWatcher.h"
 
 class CBlackHole_RealTimeRenderRdkPlugIn;
@@ -70,6 +67,12 @@ public:
     BOOL LightingChanged() const;
     void SetLightingChanged(BOOL bChanged);
     UINT MainFrameResourceID() const;
+
+    // ==========================  【我的代码】  =============================
+    // 强制启动加载 (至关重要)    如果不重写加载时机，Rhino 启动时就不会去读取显示模式
+    CRhinoPlugIn::plugin_load_time PlugInLoadTime();
+
+    // ==========================  【我的代码】  =============================
 
 private:
     ON_wString m_plugin_version;

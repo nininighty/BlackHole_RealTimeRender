@@ -1,36 +1,33 @@
-// BlackHole_RealTimeRender.cpp : Defines the initialization routines for the DLL.
+// BlackHole_RealTimeRender.cpp : 定义该 DLL 的初始化例程。
 //
 
 #include "stdafx.h"
 #include "BlackHole_RealTimeRenderApp.h"
 
 //
-//	Note!
+// 注意！
 //
-//    A Rhino plug-in is an MFC DLL.
+//    Rhino 插件是一个 MFC DLL。
 //
-//		If this DLL is dynamically linked against the MFC
-//		DLLs, any functions exported from this DLL which
-//		call into MFC must have the AFX_MANAGE_STATE macro
-//		added at the very beginning of the function.
+//    如果这个 DLL 是动态链接到 MFC DLL 的，
+//    那么任何从该 DLL 导出的函数，只要调用了 MFC，
+//    都必须在函数最开始添加 AFX_MANAGE_STATE 宏。
 //
-//		For example:
+//    例如：
 //
-//		extern "C" BOOL PASCAL EXPORT ExportedFunction()
-//		{
-//			AFX_MANAGE_STATE(AfxGetStaticModuleState());
-//			// normal function body here
-//		}
+//    extern "C" BOOL PASCAL EXPORT ExportedFunction()
+//    {
+//        AFX_MANAGE_STATE(AfxGetStaticModuleState());
+//        // 正常的函数体
+//    }
 //
-//		It is very important that this macro appear in each
-//		function, prior to any calls into MFC.  This means that
-//		it must appear as the first statement within the 
-//		function, even before any object variable declarations
-//		as their constructors may generate calls into the MFC
-//		DLL.
+//    非常重要：这个宏必须出现在每一个相关函数中，
+//    并且必须在任何 MFC 调用之前。
+//    这意味着它必须是函数体中的第一条语句，
+//    甚至要在任何对象变量声明之前，
+//    因为对象构造函数可能会调用 MFC DLL。
 //
-//		Please see MFC Technical Notes 33 and 58 for additional
-//		details.
+//    更多细节请参考 MFC 技术文档 33 和 58。
 //
 
 // CBlackHole_RealTimeRenderApp
@@ -38,17 +35,17 @@
 BEGIN_MESSAGE_MAP(CBlackHole_RealTimeRenderApp, CWinApp)
 END_MESSAGE_MAP()
 
-// The one and only CBlackHole_RealTimeRenderApp object
+// 唯一的 CBlackHole_RealTimeRenderApp 对象
 CBlackHole_RealTimeRenderApp theApp;
 
-// CBlackHole_RealTimeRenderApp initialization
+// CBlackHole_RealTimeRenderApp 初始化
 
 BOOL CBlackHole_RealTimeRenderApp::InitInstance()
 {
-  // CRITICAL: DO NOT CALL RHINO SDK FUNCTIONS HERE!
-  // Only standard MFC DLL instance initialization belongs here. 
-  // All other significant initialization should take place in
-  // CBlackHole_RealTimeRenderPlugIn::OnLoadPlugIn().
+	// 关键：不要在这里调用 Rhino SDK 函数！
+	// 这里只能进行标准的 MFC DLL 实例初始化。
+	// 所有其他重要初始化逻辑应放在
+	// CBlackHole_RealTimeRenderPlugIn::OnLoadPlugIn() 中。
 
 	CWinApp::InitInstance();
 
@@ -57,10 +54,10 @@ BOOL CBlackHole_RealTimeRenderApp::InitInstance()
 
 int CBlackHole_RealTimeRenderApp::ExitInstance()
 {
-  // CRITICAL: DO NOT CALL RHINO SDK FUNCTIONS HERE!
-  // Only standard MFC DLL instance clean up belongs here. 
-  // All other significant cleanup should take place in either
-  // CBlackHole_RealTimeRenderPlugIn::OnSaveAllSettings() or
-  // CBlackHole_RealTimeRenderPlugIn::OnUnloadPlugIn().
-  return CWinApp::ExitInstance();
+	// 关键：不要在这里调用 Rhino SDK 函数！
+	// 这里只能进行标准的 MFC DLL 清理工作。
+	// 所有其他重要的清理逻辑应放在
+	// CBlackHole_RealTimeRenderPlugIn::OnSaveAllSettings() 或
+	// CBlackHole_RealTimeRenderPlugIn::OnUnloadPlugIn() 中。
+	return CWinApp::ExitInstance();
 }

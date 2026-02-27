@@ -1,5 +1,5 @@
-<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
@@ -11,48 +11,40 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="BlackHole_RealTimeDisplayMode.cpp" />
-    <ClCompile Include="cmdBlackHole_RealTimeRender.cpp" />
-    <ClCompile Include="BlackHole_RealTimeRenderApp.cpp" />
-    <ClCompile Include="BlackHole_RealTimeRenderPlugIn.cpp" />
-    <ClCompile Include="BlackHole_RealTimeRenderRdkPlugIn.cpp" />
-    <ClCompile Include="BlackHole_RealTimeRenderEventWatcher.cpp" />
-    <ClCompile Include="BlackHole_RealTimeRenderMaterial.cpp" />
-    <ClCompile Include="BlackHole_RealTimeRenderMaterialSection.cpp" />
-    <ClCompile Include="BlackHole_RealTimeRenderSdkRender.cpp" />
+    <ClCompile Include="cmdSampleRealtimeRenderer.cpp" />
+    <ClCompile Include="SampleDisplayMode.cpp" />
+    <ClCompile Include="SampleRenderer.cpp" />
+    <ClCompile Include="SampleRealtimeRendererApp.cpp" />
+    <ClCompile Include="SampleRealtimeRendererPlugIn.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="BlackHole_RealTimeDisplayMode.h" />
-    <ClInclude Include="BlackHole_RealTimeRenderApp.h" />
-    <ClInclude Include="BlackHole_RealTimeRenderPlugIn.h" />
-    <ClInclude Include="BlackHole_RealTimeRenderRdkPlugIn.h" />
-    <ClInclude Include="BlackHole_RealTimeRenderEventWatcher.h" />
-    <ClInclude Include="BlackHole_RealTimeRenderMaterial.h" />
-    <ClInclude Include="BlackHole_RealTimeRenderMaterialSection.h" />
-    <ClInclude Include="BlackHole_RealTimeRenderSdkRender.h" />
     <ClInclude Include="Resource.h" />
+    <ClInclude Include="SampleDisplayMode.h" />
+    <ClInclude Include="SampleRenderer.h" />
+    <ClInclude Include="SampleRealtimeRendererApp.h" />
+    <ClInclude Include="SampleRealtimeRendererPlugIn.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="BlackHole_RealTimeRender.def" />
-    <None Include="res\BlackHole_RealTimeRender.rc2" />
+    <None Include="res\SampleRealtimeRenderer.rc2" />
+    <None Include="SampleRealtimeRenderer.def" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="BlackHole_RealTimeRender.rc" />
+    <ResourceCompile Include="SampleRealtimeRenderer.rc" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="res\BlackHole_RealTimeRender.ico" />
+    <Image Include="res\SampleRealtimeRenderer.ico" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>MFCDLLProj</Keyword>
+    <ProjectGuid>{9996042C-BA07-4F6F-88EF-D9C304B40A7D}</ProjectGuid>
+    <ProjectName>SampleRealtimeRenderer</ProjectName>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
-    <ProjectGuid>{190BB61B-25C9-42DE-AF3C-B18DD2813F87}</ProjectGuid>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
@@ -66,17 +58,17 @@
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
     <UseOfMfc>Dynamic</UseOfMfc>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
-  <ImportGroup Label="Shared">
-  </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <RhinoSdkPath>$([MSBuild]::GetRegistryValueFromView('HKEY_LOCAL_MACHINE\SOFTWARE\McNeel\Rhinoceros\SDK\8.0', 'InstallPath', null, RegistryView.Registry64))</RhinoSdkPath>
+    <RhinoSdkVersion>8.0</RhinoSdkVersion>
+    <RhinoSdkPath>$([MSBuild]::GetRegistryValueFromView('HKEY_LOCAL_MACHINE\SOFTWARE\McNeel\Rhinoceros\SDK\$(RhinoSdkVersion)', 'InstallPath', null, RegistryView.Registry64))</RhinoSdkPath>
   </PropertyGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -99,6 +91,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN64;_WINDOWS;NDEBUG;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -127,6 +120,8 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>

@@ -7,6 +7,7 @@
 #include "Resource.h"
 #include "BlackHole_RealTimeRenderRdkPlugIn.h"
 #include "BlackHole_RealTimeRenderSdkRender.h"
+#include "BlackHole_RealTimeDisplayMode.h"
 
 // 插件对象必须在任何继承自 CRhinoCommand 的插件类之前构造。
 // #pragma init_seg(lib) 确保这一点。
@@ -112,46 +113,57 @@ GUID CBlackHole_RealTimeRenderPlugIn::PlugInID() const
 /////////////////////////////////////////////////////////////////////////////
 // 额外重写的函数
 
-BOOL CBlackHole_RealTimeRenderPlugIn::OnLoadPlugIn()
-{
-	// 说明：
-	//   在插件加载并且构造函数运行之后调用。
-	//   这是执行重要初始化、许可证检查等操作的好地方。
-	//   此函数必须返回 TRUE 插件才会继续加载。
+// 实现加载时间重写，告诉 Rhino 在启动时就激活此插件
+// ---------------------------------------------------------
+CRhinoPlugIn::plugin_load_time CBlackHole_RealTimeRenderPlugIn::PlugInLoadTime() {
+	return CRhinoPlugIn::load_plugin_at_startup;
+}
 
-	// 备注：
-	//   插件不会在 Rhino 启动时立即加载，
-	//   而是在 Rhino 启动并创建默认文档之后才加载。
-	//   因为默认文档已经存在，
-	//   CRhinoEventWatcher::On????Document() 对默认文档不会触发。
-	//   如果你需要进行文档初始化或同步，
-	//   应该重写此函数并在这里处理。
-	//   不需要调用 CPlugIn::OnLoadPlugIn()。
-
-	// 如果这个 assert 触发，很可能是 RDK 尚未被 Rhino 加载。
-	// 这种情况可能发生在你先加载插件，
-	// 而调试版 RDK 还没有加载，但 Rhino 在搜索路径中找到了 rdk.rhp。
-	// 如果发生这种情况：
-	// 1 保护加载你的插件
-	// 2 重启 Rhino
-	// 3 通过拖拽或插件管理器加载 rdk.rhp
-	// 4 然后取消保护加载你的插件
+// ---------------------------------------------------------
+// 插件加载主入口，在这里完成 RDK 初始化和实时模式注入
+// ---------------------------------------------------------
+// 插件加载主入口：执行初始化并确保黑洞模式挂载到视窗下拉菜单
+BOOL CBlackHole_RealTimeRenderPlugIn::OnLoadPlugIn() {
 	ASSERT(RhRdkIsAvailable());
 
-	// TODO：在这里添加渲染插件初始化代码。
-
+	// 1. 初始化 RDK 插件核心
 	m_pRdkPlugIn = new CBlackHole_RealTimeRenderRdkPlugIn;
-	ON_wString str;
-	if (!m_pRdkPlugIn->Initialize())
-	{
+	if (!m_pRdkPlugIn->Initialize()) {
 		delete m_pRdkPlugIn;
 		m_pRdkPlugIn = nullptr;
-		str.Format(L"Failed to load %s, version %s. RDK initialization failed\n", PlugInName(), PlugInVersion());
-		RhinoApp().Print(str);
 		return FALSE;
 	}
 
-	str.Format(L"Loading %s, version %s\n", PlugInName(), PlugInVersion());
+	// 2. 注册显示模式工厂：这是实时引擎能被视窗识别的前提
+	RhRdk::Realtime::DisplayMode::Factory::Register(std::make_unique<CBlackHole_RealTimeDisplayModeFactory>());
+
+	// 3. 获取或创建显示属性条目
+	DisplayAttrsMgrListDesc* pDesc = CRhinoDisplayAttrsMgr::FindDisplayAttrsDesc(BlackHoleDisplayModeId());
+
+	// 如果条目不存在，则创建一个新条目
+	if (nullptr == pDesc) {
+		pDesc = CRhinoDisplayAttrsMgr::AppendNewEntry();
+	}
+
+	// 4. 强制刷新配置：确保菜单标志和实时引擎 ID 始终正确
+	if (nullptr != pDesc && nullptr != pDesc->m_pAttrs) {
+		// 【关键】：强制开启菜单显示，修正之前运行可能留下的错误配置
+		pDesc->m_bAddToMenu = true;
+
+		// 绑定身份标识、显示名称以及关联的实时渲染 ID
+		pDesc->m_pAttrs->SetUuid(BlackHoleDisplayModeId());
+		pDesc->m_pAttrs->SetName(L"Black Hole Realtime");
+		pDesc->m_pAttrs->SetRealtimeDisplayId(BlackHoleDisplayModeId());
+
+		// 绑定底层绘制管线为 OpenGL
+		pDesc->m_pAttrs->SetPipeline(&ON_CLASS_RTTI(CRhinoDisplayPipeline_OGL));
+
+		// 保存修改到 Rhino 用户的 Profile，确保重启后依然生效
+		CRhinoDisplayAttrsMgr::SaveProfile(RhinoApp().ProfileContext());
+	}
+
+	ON_wString str;
+	str.Format(L"Loading %s (Realtime Mode Loaded Successfully)\n", PlugInName());
 	RhinoApp().Print(str);
 
 	return TRUE;

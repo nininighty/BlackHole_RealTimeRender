@@ -13,8 +13,11 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="___MyComponents__">
+    <Filter Include="___MyHeaders__">
       <UniqueIdentifier>{1341e8e0-9787-46d3-a065-3b99f090b8f2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="__MySourceFiles__">
+      <UniqueIdentifier>{2ffa2360-7c97-4b3b-8a22-2a2e2806bdd3}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -44,6 +47,9 @@
     </ClCompile>
     <ClCompile Include="BlackHole_RealTimeRenderSdkRender.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="BlackHole_RealTimeDisplayMode.cpp">
+      <Filter>__MySourceFiles__</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -76,6 +82,9 @@
     </ClInclude>
     <ClInclude Include="BlackHole_RealTimeRenderSdkRender.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="BlackHole_RealTimeDisplayMode.h">
+      <Filter>___MyHeaders__</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
