@@ -1,6 +1,7 @@
 #pragma once
 #include "stdafx.h"
 #include <memory> // 支持 std::shared_ptr
+#include "CBlackHole_RealTimeRenderer.h"    // 引入黑洞渲染器
 
 // 为黑洞显示模式生成一份独一无二的GUID
 static const ON_UUID& BlackHoleDisplayModeId() {
@@ -9,32 +10,7 @@ static const ON_UUID& BlackHoleDisplayModeId() {
 }
 
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-// 1. 渲染器类：负责后台算像素
-class CBlackHole_RealTimeRenderer {
-public:
-    // 构造函数：初始化成员变量，设置初始运行状态为 false
-    CBlackHole_RealTimeRenderer(RhRdk::Realtime::ISignalUpdate* pSignalUpdateInterface = nullptr);
-    // 析构函数：确保线程安全退出
-    ~CBlackHole_RealTimeRenderer();
-
-    // 启动渲染流程：初始化缓冲区并开启后台线程
-    bool StartRenderProcess(const ON_2iSize& frameSize);
-    // 停止渲染流程：安全销毁线程
-    void StopRenderProcess();
-    // 状态检查
-    bool Running() const { return m_bRunning; }
-    // 获取渲染窗口接口
-    IRhRdkRenderWindow* RenderWindow() const { return m_pRenderWnd; }
-
-private:
-    // 后台线程函数
-    static unsigned int RenderProcess(void* pData);
-
-    bool m_bRunning = false;
-    CWinThread* m_pRenderThread = nullptr;
-    IRhRdkRenderWindow* m_pRenderWnd = nullptr;
-    RhRdk::Realtime::ISignalUpdate* m_pSignalUpdateInterface = nullptr;
-};
+// 1. 渲染器类：负责后台算像素：由 CBlackHole_RealTimeRender.h 中的渲染器接管
 
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 // 2. 显示模式类：对接视窗管线

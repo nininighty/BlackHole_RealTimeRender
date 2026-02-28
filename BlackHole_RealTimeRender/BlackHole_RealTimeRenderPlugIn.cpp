@@ -1,5 +1,4 @@
 ﻿// BlackHole_RealTimeRenderPlugIn.cpp : 定义插件的初始化流程
-//
 
 #include "stdafx.h"
 #include "rhinoSdkPlugInDeclare.h"
@@ -120,9 +119,7 @@ CRhinoPlugIn::plugin_load_time CBlackHole_RealTimeRenderPlugIn::PlugInLoadTime()
 }
 
 // ---------------------------------------------------------
-// 插件加载主入口，在这里完成 RDK 初始化和实时模式注入
-// ---------------------------------------------------------
-// 插件加载主入口：执行初始化并确保黑洞模式挂载到视窗下拉菜单
+// 插件加载主入口，在这里完成 RDK 初始化和实时模式注入，执行初始化并确保黑洞模式挂载到视窗下拉菜单
 BOOL CBlackHole_RealTimeRenderPlugIn::OnLoadPlugIn() {
 	ASSERT(RhRdkIsAvailable());
 

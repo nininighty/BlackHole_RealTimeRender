@@ -51,6 +51,9 @@
     <ClCompile Include="BlackHole_RealTimeDisplayMode.cpp">
       <Filter>__MySourceFiles__</Filter>
     </ClCompile>
+    <ClCompile Include="CBlackHole_RealTimeRenderer.cpp">
+      <Filter>__MySourceFiles__</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BlackHole_RealTimeRenderApp.h">
@@ -84,6 +87,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="BlackHole_RealTimeDisplayMode.h">
+      <Filter>___MyHeaders__</Filter>
+    </ClInclude>
+    <ClInclude Include="CBlackHole_RealTimeRenderer.h">
       <Filter>___MyHeaders__</Filter>
     </ClInclude>
   </ItemGroup>
