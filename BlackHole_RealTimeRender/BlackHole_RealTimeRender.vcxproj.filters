@@ -48,10 +48,13 @@
     <ClCompile Include="BlackHole_RealTimeRenderSdkRender.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="BlackHole_RealTimeDisplayMode.cpp">
+    <ClCompile Include="CBlackHole_RealTimeDisplayMode.cpp">
       <Filter>__MySourceFiles__</Filter>
     </ClCompile>
     <ClCompile Include="CBlackHole_RealTimeRenderer.cpp">
+      <Filter>__MySourceFiles__</Filter>
+    </ClCompile>
+    <ClCompile Include="CBlackHole_GPUManager.cpp">
       <Filter>__MySourceFiles__</Filter>
     </ClCompile>
   </ItemGroup>
@@ -86,10 +89,25 @@
     <ClInclude Include="BlackHole_RealTimeRenderSdkRender.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="BlackHole_RealTimeDisplayMode.h">
+    <ClInclude Include="CBlackHole_RealTimeDisplayMode.h">
       <Filter>___MyHeaders__</Filter>
     </ClInclude>
     <ClInclude Include="CBlackHole_RealTimeRenderer.h">
+      <Filter>___MyHeaders__</Filter>
+    </ClInclude>
+    <ClInclude Include="CBlackHole_GPUManager.h">
+      <Filter>___MyHeaders__</Filter>
+    </ClInclude>
+    <ClInclude Include="CBlackHole_Common.h">
+      <Filter>___MyHeaders__</Filter>
+    </ClInclude>
+    <ClInclude Include="BlackHole_Kernel.h">
+      <Filter>___MyHeaders__</Filter>
+    </ClInclude>
+    <ClInclude Include="CBlackHole_TheBlackHole.h">
+      <Filter>___MyHeaders__</Filter>
+    </ClInclude>
+    <ClInclude Include="stb_image.h">
       <Filter>___MyHeaders__</Filter>
     </ClInclude>
   </ItemGroup>
@@ -110,5 +128,10 @@
     <Image Include="res\BlackHole_RealTimeRender.ico">
       <Filter>Resource Files</Filter>
     </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="BlackHole_Kernel.hlsl">
+      <Filter>__MySourceFiles__</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

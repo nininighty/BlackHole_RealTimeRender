@@ -1,12 +1,13 @@
 ﻿// BlackHole_RealTimeRenderPlugIn.cpp : 定义插件的初始化流程
 
 #include "stdafx.h"
+#include "Resource.h"
 #include "rhinoSdkPlugInDeclare.h"
 #include "BlackHole_RealTimeRenderPlugIn.h"
-#include "Resource.h"
+#include "CBlackHole_RealTimeDisplayMode.h"
 #include "BlackHole_RealTimeRenderRdkPlugIn.h"
 #include "BlackHole_RealTimeRenderSdkRender.h"
-#include "BlackHole_RealTimeDisplayMode.h"
+
 
 // 插件对象必须在任何继承自 CRhinoCommand 的插件类之前构造。
 // #pragma init_seg(lib) 确保这一点。
