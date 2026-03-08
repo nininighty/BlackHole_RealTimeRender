@@ -90,6 +90,7 @@ unsigned int CBlackHole_RealTimeRenderer::RenderProcess(void* pData) {
     const int targetFPS = 30; // 目标帧率 30 帧
     const int frameTimeMs = 1000 / targetFPS;
 
+
     while (pR->m_bRunning) {
         if (pR->m_bIsDirty) {
             auto now = high_resolution_clock::now();
@@ -105,17 +106,21 @@ unsigned int CBlackHole_RealTimeRenderer::RenderProcess(void* pData) {
             // 实时获取当前 Rhino 渲染窗口的物理像素尺寸
             const ON_2iSize sz = pR->m_pRenderWnd->Size();
 
-            // 1. 拷贝一份安全的相机参数，马上释放锁，防止阻塞主线程
+            // 1. 拷贝一份安全的相机参数与物理参数，马上释放锁，防止阻塞主线程
             CameraParameters safeCam;
+            float safeMass = 1.0f;
+            float safeSpin = 0.9f;
             {
-                // 局部作用域，方便拆锁
                 std::lock_guard<std::mutex> lock(pR->m_camMutex);
                 safeCam = pR->m_currentCam;
+                safeMass = pR->m_targetMass;  
+                safeSpin = pR->m_targetSpin; 
             }
 
             // 2. GPU 渲染管线
             if (pR->m_gpu.Initialize(sz.cx, sz.cy)) {
-                pR->m_gpu.UpdateParams(safeCam, sz.cx, sz.cy);
+                
+                pR->m_gpu.UpdateParams(safeCam, safeMass, safeSpin, sz.cx, sz.cy);
                 pR->m_gpu.Dispatch(sz.cx, sz.cy);
 
                 // 3. 映射结果给 Rhino
@@ -140,4 +145,16 @@ unsigned int CBlackHole_RealTimeRenderer::RenderProcess(void* pData) {
         }
     }
     return 0;
+}
+
+// Rhino命令更改黑洞参数
+void CBlackHole_RealTimeRenderer::UpdatePhysicsParams(double mass, double spin) {
+    // 复用 m_camMutex 保证线程安全，防止一边渲染一边修改参数导致程序崩溃
+    std::lock_guard<std::mutex> lock(m_camMutex);
+
+    // 负数代表不修改该参数
+    if (mass >= 0.0) m_targetMass = static_cast<float>(mass);
+    if (spin >= 0.0) m_targetSpin = static_cast<float>(spin);
+
+    m_bIsDirty = true; // 标记脏数据，唤醒后台线程重新计算画面
 }

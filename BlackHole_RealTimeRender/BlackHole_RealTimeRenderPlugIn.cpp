@@ -3,6 +3,7 @@
 #include "stdafx.h"
 #include "Resource.h"
 #include "rhinoSdkPlugInDeclare.h"
+#include "CBlackHole_RealTimeRenderer.h"
 #include "BlackHole_RealTimeRenderPlugIn.h"
 #include "CBlackHole_RealTimeDisplayMode.h"
 #include "BlackHole_RealTimeRenderRdkPlugIn.h"
@@ -289,4 +290,15 @@ BOOL CBlackHole_RealTimeRenderPlugIn::LightingChanged() const
 void CBlackHole_RealTimeRenderPlugIn::SetLightingChanged(BOOL bChanged)
 {
 	m_event_watcher.SetLightFlags(bChanged);
+}
+
+// 新增实现
+void CBlackHole_RealTimeRenderPlugIn::SetRenderer(CBlackHole_RealTimeRenderer* pRenderer)
+{
+	m_pRenderer = pRenderer;
+}
+
+CBlackHole_RealTimeRenderer* CBlackHole_RealTimeRenderPlugIn::GetRenderer()
+{
+	return m_pRenderer;
 }

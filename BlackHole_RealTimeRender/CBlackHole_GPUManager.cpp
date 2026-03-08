@@ -5,6 +5,8 @@
 #include "BlackHole_Kernel.h"
 #include "CBlackHole_GPUManager.h"
 
+#pragma comment(lib, "d3d11.lib")
+
 bool CBlackHole_GPUManager::Initialize(int w, int h) {
     // 1. 不仅要检查资源是否存在，还要检查尺寸是否发生变化
     if (m_pDevice && m_pShader && m_pConstantBuffer && m_currentWidth == w && m_currentHeight == h) {
@@ -86,7 +88,7 @@ bool CBlackHole_GPUManager::Initialize(int w, int h) {
 }
 
 // 将 CPU 端实时捕获的相机动态数据，同步给 GPU 的物理计算单元。
-void CBlackHole_GPUManager::UpdateParams(const CameraParameters& cam, int w, int h) {
+void CBlackHole_GPUManager::UpdateParams(const CameraParameters& cam, float mass, float spin, int w, int h) {
     // 1. 安全检查
     if (!m_pConstantBuffer || !m_pContext) return;
 
@@ -105,9 +107,11 @@ void CBlackHole_GPUManager::UpdateParams(const CameraParameters& cam, int w, int
         p->camDir[0] = (float)cam.dir.x; p->camDir[1] = (float)cam.dir.y; p->camDir[2] = (float)cam.dir.z;
         p->camUp[0] = (float)cam.up.x;   p->camUp[1] = (float)cam.up.y;   p->camUp[2] = (float)cam.up.z;
         p->fov = (float)cam.viewAngle;
+        p->maxSteps = m_MaxSteps;
         p->width = (float)w;
         p->height = (float)h;
         // 写入质量和自旋
+        m_theBlackHole.set(mass, mass * spin);
         p->mass = m_theBlackHole.getMass();
         p->spin = m_theBlackHole.getSpin();
 

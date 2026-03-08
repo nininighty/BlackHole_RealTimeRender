@@ -10,7 +10,7 @@ using Microsoft::WRL::ComPtr;
 class CBlackHole_GPUManager {
 public:
     bool Initialize(int w, int h);
-    void UpdateParams(const CameraParameters& cam, int w, int h);
+    void UpdateParams(const CameraParameters& cam, float mass, float spin, int w, int h);
     void Dispatch(int w, int h);
     void* MapResult(UINT& rowPitch);
     void UnmapResult();
@@ -18,6 +18,7 @@ public:
 
 private:
     TheBlackHole m_theBlackHole;
+    int m_MaxSteps = 600; // 步进函数最大步长
 
     ComPtr<ID3D11ShaderResourceView> m_pSkyboxSRV;   // HDR 纹理资源视图
     ComPtr<ID3D11SamplerState>       m_pSkyboxSampler; // 纹理采样器

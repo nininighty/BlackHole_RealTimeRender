@@ -1,1 +1,2 @@
 # BlackHole_RealTimeRender
+本人26考研的复试项目，在本科建筑学阶段使用的Rhino建模软件中实现实时渲染克尔Kerr黑洞。

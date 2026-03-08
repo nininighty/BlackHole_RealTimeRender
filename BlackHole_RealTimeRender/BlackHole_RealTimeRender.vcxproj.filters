@@ -57,6 +57,9 @@
     <ClCompile Include="CBlackHole_GPUManager.cpp">
       <Filter>__MySourceFiles__</Filter>
     </ClCompile>
+    <ClCompile Include="cmdSetBlackHoleParams.cpp">
+      <Filter>__MySourceFiles__</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BlackHole_RealTimeRenderApp.h">
@@ -101,13 +104,16 @@
     <ClInclude Include="CBlackHole_Common.h">
       <Filter>___MyHeaders__</Filter>
     </ClInclude>
-    <ClInclude Include="BlackHole_Kernel.h">
-      <Filter>___MyHeaders__</Filter>
-    </ClInclude>
     <ClInclude Include="CBlackHole_TheBlackHole.h">
       <Filter>___MyHeaders__</Filter>
     </ClInclude>
     <ClInclude Include="stb_image.h">
+      <Filter>___MyHeaders__</Filter>
+    </ClInclude>
+    <ClInclude Include="BlackHole_Kernel.h">
+      <Filter>___MyHeaders__</Filter>
+    </ClInclude>
+    <ClInclude Include="cmdSetBlackHoleParams.h">
       <Filter>___MyHeaders__</Filter>
     </ClInclude>
   </ItemGroup>

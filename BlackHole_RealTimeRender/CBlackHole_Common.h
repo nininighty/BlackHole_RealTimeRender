@@ -3,7 +3,7 @@
 
 // 专门用于显卡传输的结构体，16 字节对齐
 struct GPU_Buffer_Data {
-    float camPos[3];    float pad1;      // 相机坐标，16字节
+    float camPos[3];    float maxSteps;      // 相机坐标 + 步数
     float camDir[3];    float pad2;      // 面朝方向，16字节
     float camUp[3];     float fov;       // 上方向量 + fov，16字节
     float width;        float height;    float mass;  float spin; 

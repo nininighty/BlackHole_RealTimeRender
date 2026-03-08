@@ -25,6 +25,7 @@ public:
 
     void UpdateCamera(const ON_Viewport& vp);
     IRhRdkRenderWindow* RenderWindow() const { return m_pRenderWnd; }    // 获取 Rhino 提供的渲染画布
+    void UpdatePhysicsParams(double mass, double spin); // 更改黑洞参数的命令
 
     // ==========================================
     // 3. 多线程同步锁
@@ -44,6 +45,10 @@ private:
     CameraParameters  m_currentCam;  // 当前帧的相机参数
     std::mutex        m_camMutex;               // 相机锁
     ON_Xform          m_lastCameraMatrix;   // 记录上一次的相机变换矩阵
+
+    // 安全缓存物理参数
+    float m_targetMass = 1.0f;
+    float m_targetSpin = 0.9f;
 
     // ==========================================
     // 6. 后台执行体与底层资源

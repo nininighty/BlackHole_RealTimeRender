@@ -1,138 +1,173 @@
 // ==========================================
 // 1. 缓冲区与资源绑定
 
-cbuffer CameraBuffer : register(b0)
-{
+cbuffer CameraBuffer : register(b0) {
     float3 camPos;
-    float pad1;
+    float maxSteps;
     float3 camDir;
-    float pad2;
+    float p2;
     float3 camUp;
     float fov;
-    float2 resolution;
-    float mass; 
-    float spin; 
+    float2 res;
+    float mass;
+    float spin;
 };
 
-RWTexture2D<float4> OutputBuffer : register(u0);
-
-// HDR 资源
-Texture2D<float4> SkyboxTex : register(t0);
-SamplerState SkyboxSampler : register(s0);
-
-static const float PI = 3.14159265359;
+RWTexture2D<float4> OutputBuffer : register(u0);    // Rhino视窗在显存中的缓存区
+Texture2D<float4> SkyboxTex : register(t0); // 背景素材
+SamplerState SkyboxSampler : register(s0);  // 背景采样规则
+static const float PI = 3.14159265;
 
 // ==========================================
-// 2. 物理引擎：广义相对论测地线
+// 2. 物理核心：Kerr-Schild 精确测地线方程
 
-// 计算施瓦西度规下的加速度
-float3 GetSchwarzschildAcceleration(float3 pos, float3 vel, float mass)
+// 计算当前位置的坐标导数与动量导数
+void GetKerrSchildDerivatives(
+float3 pos,     // 当前位置坐标
+float3 p,       // 共轭动量空间动量
+float M , float a,  // 黑洞参数 
+out float3 dPos,    // 返回值：坐标导数 
+out float3 dP)      // 返回值：动量导数
 {
-    float r2 = dot(pos, pos);
-    float r = sqrt(r2);
-    float r5 = r2 * r2 * r;
+    float x = pos.x, y = pos.y, z = pos.z;
+    float R2 = x * x + y * y + z * z;
+    float a2 = a * a;
     
-    if (r5 < 0.0001)
-        return float3(0, 0, 0);
+    // 求解 Kerr 坐标半径 r
+    float r2 = 0.5 * (R2 - a2 + sqrt((R2 - a2) * (R2 - a2) + 4.0 * a2 * z * z));
+    float r = sqrt(max(r2, 1e-8));
+    float r3 = r2 * r;
+    float r4 = r2 * r2;
 
-    float3 h = cross(pos, vel);
-    float h2 = dot(h, h);
+    // 计算 Sigma_KS 辅助量
+    float SigmaKS = (x * x + y * y) / ((r2 + a2) * (r2 + a2)) + (z * z) / max(r4, 1e-8);
+    SigmaKS = max(SigmaKS, 1e-8);
 
-    return -(3.0 * mass * h2 / r5) * pos;
+    // 半径关于直角坐标的偏导 dr_i
+    float dr_x = x / (r * (r2 + a2) * SigmaKS);
+    float dr_y = y / (r * (r2 + a2) * SigmaKS);
+    float dr_z = z / (r3 * SigmaKS);
+    float3 dr_vec = float3(dr_x, dr_y, dr_z);
+
+    // 计算标量函数 f 及其偏导 df_i
+    float D = r4 + a2 * z * z;
+    float D2 = D * D;
+    float f = (2.0 * M * r3) / D;
+    float df_dr = 2.0 * M * r2 * (3.0 * a2 * z * z - r4) / D2;
+    float df_dz = -4.0 * M * a2 * r3 * z / D2;
+    float3 df_vec = df_dr * dr_vec + float3(0, 0, df_dz);
+
+    // 计算零矢 l_i
+    float lx = (r * x + a * y) / (r2 + a2);
+    float ly = (r * y - a * x) / (r2 + a2);
+    float lz = z / r;
+    float3 l_vec = float3(lx, ly, lz);
+
+    // 计算零矢的偏导辅助项 B_i
+    float Bx = (a2 * x - r2 * x - 2.0 * a * r * y) / ((r2 + a2) * (r2 + a2));
+    float By = (a2 * y - r2 * y + 2.0 * a * r * x) / ((r2 + a2) * (r2 + a2));
+    float Bz = -z / r2;
+
+    // 缩并 p_alpha * \partial_\mu l^\alpha
+    float term_x = (r * p.x - a * p.y) / (r2 + a2);
+    float term_y = (a * p.x + r * p.y) / (r2 + a2);
+    float term_z = p.z / r;
+    float p_dot_B = p.x * Bx + p.y * By + p.z * Bz;
+    float3 p_dl = float3(term_x, term_y, term_z) + p_dot_B * dr_vec;
+
+    // 动量缩并 k = l^\alpha p_\alpha (由于能量 p_t = -1 守恒)
+    float k = 1.0 + dot(l_vec, p);
+
+    // 哈密顿运动方程：位置导数 dx/d\lambda
+    dPos = p - f * k * l_vec;
+
+    // 哈密顿运动方程：动量导数 dp/d\lambda
+    dP = 0.5 * k * k * df_vec + f * k * p_dl;
 }
 
 // RK4 积分器
-void StepRK4(inout float3 pos, inout float3 vel, float h_step, float mass)
+void StepRK4(inout float3 pos, inout float3 p_vec, float h_step, float M, float a)
 {
-    float3 kr1 = vel;
-    float3 kv1 = GetSchwarzschildAcceleration(pos, vel, mass);
+    float3 k1_pos, k1_p;
+    GetKerrSchildDerivatives(pos, p_vec, 
+    M, a, k1_pos, k1_p);
+    
+    float3 k2_pos, k2_p;
+    GetKerrSchildDerivatives(pos  +  0.5 * h_step * k1_pos   ,     p_vec + 0.5 * h_step * k1_p,
+    M, a, k2_pos, k2_p);
 
-    float3 r2 = pos + 0.5 * h_step * kr1;
-    float3 v2 = vel + 0.5 * h_step * kv1;
-    float3 kr2 = v2;
-    float3 kv2 = GetSchwarzschildAcceleration(r2, v2, mass);
+    float3 k3_pos, k3_p;
+    GetKerrSchildDerivatives(pos + 0.5 * h_step * k2_pos    ,   p_vec + 0.5 * h_step * k2_p, 
+    M, a, k3_pos, k3_p);
 
-    float3 r3 = pos + 0.5 * h_step * kr2;
-    float3 v3 = vel + 0.5 * h_step * kv2;
-    float3 kr3 = v3;
-    float3 kv3 = GetSchwarzschildAcceleration(r3, v3, mass);
+    float3 k4_pos, k4_p;
+    GetKerrSchildDerivatives(pos + h_step * k3_pos  ,  p_vec + h_step * k3_p,
+    M, a, k4_pos, k4_p);
 
-    float3 r4 = pos + h_step * kr3;
-    float3 v4 = vel + h_step * kv3;
-    float3 kr4 = v4;
-    float3 kv4 = GetSchwarzschildAcceleration(r4, v4, mass);
-
-    pos += (h_step / 6.0) * (kr1 + 2.0 * kr2 + 2.0 * kr3 + kr4);
-    vel += (h_step / 6.0) * (kv1 + 2.0 * kv2 + 2.0 * kv3 + kv4);
+    pos += (h_step / 6.0) * (k1_pos + 2.0 * k2_pos + 2.0 * k3_pos + k4_pos);
+    p_vec += (h_step / 6.0) * (k1_p + 2.0 * k2_p + 2.0 * k3_p + k4_p);
+    // 这里绝对不能 normalize(p_vec)，弯曲时空动量大小不是1
 }
 
 // ==========================================
-// 3. 主渲染管线：光线追踪
+// 3. 主程序
 
 [numthreads(16, 16, 1)]
-void CSMain(uint3 id : SV_DispatchThreadID) {
-    if (id.x >= (uint) resolution.x || id.y >= (uint) resolution.y)
+void CSMain(uint3 id : SV_DispatchThreadID)
+{
+    // 屏幕越界检测
+    if (id.x >= (uint) res.x || id.y >= (uint) res.y)
         return;
 
-    // --- 1. 相机射线初始化 ---
-    float2 uv = float2(id.xy) / resolution.xy;
-    uv = uv * 2.0 - 1.0;
+    // 1. 相机射线生成
+    float2 uv = (float2(id.xy) / res.xy) * 2.0 - 1.0;
     uv.y = -uv.y;
 
-    float aspect = resolution.x / resolution.y;
-    float3 forward = normalize(camDir);
-    float3 up = normalize(camUp);
-    float3 right = normalize(cross(forward, up));
-    up = cross(right, forward);
+    float aspect = res.x / res.y;
+    float3 f_dir = normalize(camDir);
+    float3 r_axis = normalize(cross(f_dir, normalize(camUp)));
+    float3 u_axis = cross(r_axis, f_dir);
 
-    float halfFovTan = tan(fov * 0.5);
-    float3 rayDir = normalize(forward + right * uv.x * aspect * halfFovTan + up * uv.y * halfFovTan);
+    // 计算当前单个光子初始朝向
+    float3 rayDir = normalize(f_dir + r_axis * uv.x * aspect * tan(fov * 0.5) + u_axis * uv.y * tan(fov * 0.5));
 
-    // --- 2. 物理状态初始化 ---
+    // 2. 初始化物理状态
     float3 pos = camPos;
-    float3 vel = rayDir;
-    
-    float rs = 2.0 * mass;
-    
-    // 调整项：增大步数和步长，让光线能跑大约 100 个单位！
-    int maxSteps = 2000;
-    float h_step = 0.1;
+    float3 p_vec = rayDir; // 初始处处于平直时空，光子动量即为方向
 
-    float escapeRadius = max(length(camPos) + 10.0, 30.0);
-    
-    // 标记是否掉进黑洞
-    bool isCaptured = false;
+    // 事件视界半径 rs (外视界)
+    float rs = mass + sqrt(max(0.0, mass * mass - spin * spin));
+    float esc = max(length(camPos) + 10.0, 50.0);
+    bool hit = false;
 
-    // --- 3. Raymarching 主循环 ---
-    for (int i = 0; i < maxSteps; ++i) {
-        StepRK4(pos, vel, h_step, mass);
-        float r = length(pos);
+    // 3. 追踪循环
+    for (int i = 0; i < maxSteps; ++i)  {
+        // RK4积分
+        StepRK4(pos, p_vec, 0.15, mass, spin);
 
-        // 条件 A：撞击视界，掉入黑洞
-        if (r < rs) {
-            isCaptured = true;
-            break; // 结束这根光线的计算
+        // 每步计算最新的克尔半径 r 用于碰撞检测
+        float R2 = pos.x * pos.x + pos.y * pos.y + pos.z * pos.z;
+        float r2 = 0.5 * (R2 - spin * spin + sqrt((R2 - spin * spin) * (R2 - spin * spin) + 4.0 * spin * spin * pos.z * pos.z));
+
+        // 碰撞视界或坠入奇点
+        if (r2 < rs * rs || r2 < 0.05) {
+            hit = true;
+            break;
         }
-
-        // 条件 B：逃逸到宇宙
-        if (r > escapeRadius) {
-            break; // 逃逸了，去采样星空
-        }
+        
+        // 逃逸判定
+        if (R2 > esc * esc)
+            break;
     }
 
-    // --- 4. 结算最终颜色 ---
-    if (isCaptured) {
-        // 只有被黑洞彻底吞噬，才是纯黑色
-        OutputBuffer[id.xy] = float4(0.0, 0.0, 0.0, 1.0);
-    }
-    else  {
-        // 只要没被吞噬都根据光线现在的方向去采样星空
-        float3 outDir = normalize(vel);
-        
-        float u = 0.5 + atan2(outDir.y, outDir.x) / (2.0 * PI);
-        float v = 0.5 - asin(outDir.z) / PI;
-        
-        float4 skyColor = SkyboxTex.SampleLevel(SkyboxSampler, float2(u, v), 0);
-        OutputBuffer[id.xy] = skyColor*1.2;
+    // 4. 最终着色
+    if (hit) {
+        OutputBuffer[id.xy] = float4(0, 0, 0, 1);
+    } else  {
+        // 逃逸到平直时空后，重新将动量归一化转为方向向量进行采样
+        float3 v = normalize(p_vec);
+        float u_coord = 0.5 + atan2(v.y, v.x) / (2.0 * PI);
+        float v_coord = 0.5 - asin(clamp(v.z, -0.99, 0.99)) / PI;
+        OutputBuffer[id.xy] = SkyboxTex.SampleLevel(SkyboxSampler, float2(u_coord, v_coord), 0) * 1.2;
     }
 }

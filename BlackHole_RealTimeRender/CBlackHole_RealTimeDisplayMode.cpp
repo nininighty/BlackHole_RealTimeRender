@@ -1,15 +1,24 @@
 // CBlackHole_RealTimeDisplayMode.cpp
 // 实时渲染显示模式实现：对接 Rhino 视图引擎回调，控制后台渲染器的启动与画面交接
 #include "stdafx.h"
+#include "BlackHole_RealTimeRenderPlugIn.h"
 #include "CBlackHole_RealTimeDisplayMode.h"
+
 
 // 构造函数：建立通讯链路
 // 将自身 (this) 作为 ISignalUpdate 接口传给渲染器，完成“呼叫机”绑定
 CBlackHole_RealTimeDisplayMode::CBlackHole_RealTimeDisplayMode(const CRhinoDisplayPipeline& p)
-    : m_Renderer(this), RhRdk::Realtime::DisplayMode(p) {}
+    : m_Renderer(this), RhRdk::Realtime::DisplayMode(p)
+{
+    // 调用 Rhino 向导生成的全局插件函数
+    BlackHole_RealTimeRenderPlugIn().SetRenderer(&m_Renderer);
+}
 
-CBlackHole_RealTimeDisplayMode::~CBlackHole_RealTimeDisplayMode() { ShutdownRenderer(); }
-
+CBlackHole_RealTimeDisplayMode::~CBlackHole_RealTimeDisplayMode()
+{
+    ShutdownRenderer();
+    BlackHole_RealTimeRenderPlugIn().SetRenderer(nullptr);
+}
 // 启动渲染器
 bool CBlackHole_RealTimeDisplayMode::StartRenderer
 (const ON_2iSize& sz, const CRhinoDoc& d, const ON_3dmView& v, const ON_Viewport& vp, const DisplayMode* pP) {

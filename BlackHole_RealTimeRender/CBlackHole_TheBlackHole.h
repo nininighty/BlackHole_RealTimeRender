@@ -8,7 +8,7 @@ private:
     float spin;           // 自旋，现在先做施瓦西黑洞暂时不自旋
 
 public:
-    TheBlackHole() :mass(1.0), spin(0) {};
+    TheBlackHole() :mass(1.0f), spin(0.9f) {};
     TheBlackHole(float m, float s) :mass(m), spin(s) {};
     inline void set(float m, float s) {
         mass = m; spin = s;

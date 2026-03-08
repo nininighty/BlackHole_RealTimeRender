@@ -54,6 +54,7 @@ private:
 // 显示模式工厂类：负责向 Rhino 注册并创建上述显示模式实例
 class CBlackHole_RealTimeDisplayModeFactory : public RhRdk::Realtime::DisplayMode::Factory, public CRhRdkObject {
 public:
+    virtual ~CBlackHole_RealTimeDisplayModeFactory() {} 
     // 插件在 Rhino 视图菜单中显示的名称
     virtual ON_wString Name() const override { return L"黑洞实时渲染"; }
     virtual const UUID& ClassId() const override { return BlackHoleDisplayModeId(); }

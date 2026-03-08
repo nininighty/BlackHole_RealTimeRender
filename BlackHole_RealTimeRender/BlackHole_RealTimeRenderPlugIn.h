@@ -2,6 +2,7 @@
 #pragma once
 #include "BlackHole_RealTimeRenderEventWatcher.h"
 
+class CBlackHole_RealTimeRenderer;
 class CBlackHole_RealTimeRenderRdkPlugIn;
 
 // CBlackHole_RealTimeRenderPlugIn
@@ -69,9 +70,11 @@ public:
     UINT MainFrameResourceID() const;
 
     // ==========================  【我的代码】  =============================
-    // 强制启动加载 (至关重要)    如果不重写加载时机，Rhino 启动时就不会去读取显示模式
+    // 强制启动加载。如果不重写加载时机，Rhino 启动时就不会去读取显示模式
     CRhinoPlugIn::plugin_load_time PlugInLoadTime();
-
+    // 向外提供获取和设置渲染器的接口
+    void SetRenderer(CBlackHole_RealTimeRenderer* pRenderer);
+    CBlackHole_RealTimeRenderer* GetRenderer();
     // ==========================  【我的代码】  =============================
 
 private:
@@ -80,6 +83,8 @@ private:
     CBlackHole_RealTimeRenderRdkPlugIn* m_pRdkPlugIn;
 
     // TODO：在这里添加额外的类信息
+    // 当前正在运行的渲染器实例
+    CBlackHole_RealTimeRenderer* m_pRenderer = nullptr;
 };
 
 // 返回唯一的 CBlackHole_RealTimeRenderPlugIn 对象的引用
