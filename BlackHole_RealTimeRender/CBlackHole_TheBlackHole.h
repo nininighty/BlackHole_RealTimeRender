@@ -5,10 +5,10 @@
 class TheBlackHole {
 private:
     float mass;           // 质量
-    float spin;           // 自旋，现在先做施瓦西黑洞暂时不自旋
+    float spin;           // 自旋
 
 public:
-    TheBlackHole() :mass(1.0f), spin(0.9f) {};
+    TheBlackHole() :mass(1.0f), spin(0.5f) {};
     TheBlackHole(float m, float s) :mass(m), spin(s) {};
     inline void set(float m, float s) {
         mass = m; spin = s;

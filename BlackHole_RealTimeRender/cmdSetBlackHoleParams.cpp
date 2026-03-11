@@ -66,7 +66,7 @@ CRhinoCommand::result CCommandSetBlackHoleParams::RunCommand(const CRhinoCommand
 
     CRhinoGetNumber gnSpin;
     gnSpin.SetCommandPrompt(L"输入新的自旋比例参数 a (按 Enter 保持原样跳过)");
-    gnSpin.SetDefaultNumber(0.90); 
+    gnSpin.SetDefaultNumber(0.50); 
     gnSpin.SetLowerLimit(0.0, TRUE);
     gnSpin.SetUpperLimit(0.99, TRUE);
     gnSpin.AcceptNothing(true);

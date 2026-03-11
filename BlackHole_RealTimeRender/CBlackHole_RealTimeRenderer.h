@@ -38,9 +38,11 @@ private:
 
     std::atomic<bool> m_bRunning{ false };  // 控制渲染线程的死循环原子锁开关
     std::atomic<bool> m_bIsDirty{ false };      // 移动视角脏标记位
+    std::atomic<bool> m_bAnimate{ true };   // 控制是否开启持续动画
 
     // ==========================================
     // 5. 核心渲染数据
+    std::chrono::high_resolution_clock::time_point m_startTime; // 渲染器启动时间戳
 
     CameraParameters  m_currentCam;  // 当前帧的相机参数
     std::mutex        m_camMutex;               // 相机锁

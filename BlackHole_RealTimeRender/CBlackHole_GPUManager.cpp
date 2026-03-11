@@ -41,7 +41,7 @@ bool CBlackHole_GPUManager::Initialize(int w, int h) {
             texDescHDR.Height = height;
             texDescHDR.MipLevels = 1;   // 原始超清图，不生成缩略图
             texDescHDR.ArraySize = 1;
-            texDescHDR.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+            texDescHDR.Format = DXGI_FORMAT_R32G32B32A32_FLOAT; 
             texDescHDR.SampleDesc.Count = 1;
             texDescHDR.Usage = D3D11_USAGE_IMMUTABLE;   // 创建后不可修改
             texDescHDR.BindFlags = D3D11_BIND_SHADER_RESOURCE;
@@ -73,6 +73,17 @@ bool CBlackHole_GPUManager::Initialize(int w, int h) {
     m_pUAV.Reset();
     m_pStagingTex.Reset();
 
+    // GPU时间戳查询器
+    if (!m_pQueryDisjoint) {
+        D3D11_QUERY_DESC qDesc = {};
+        qDesc.Query = D3D11_QUERY_TIMESTAMP_DISJOINT;
+        m_pDevice->CreateQuery(&qDesc, &m_pQueryDisjoint);
+
+        qDesc.Query = D3D11_QUERY_TIMESTAMP;
+        m_pDevice->CreateQuery(&qDesc, &m_pQueryStart);
+        m_pDevice->CreateQuery(&qDesc, &m_pQueryEnd);
+    }
+
     // 4. 根据新的宽(w)和高(h)创建纹理资源
     D3D11_TEXTURE2D_DESC texDesc = { (UINT)w, (UINT)h, 1, 1, DXGI_FORMAT_R32G32B32A32_FLOAT,
         {1,0}, D3D11_USAGE_DEFAULT, D3D11_BIND_UNORDERED_ACCESS, 0, 0 };
@@ -88,7 +99,7 @@ bool CBlackHole_GPUManager::Initialize(int w, int h) {
 }
 
 // 将 CPU 端实时捕获的相机动态数据，同步给 GPU 的物理计算单元。
-void CBlackHole_GPUManager::UpdateParams(const CameraParameters& cam, float mass, float spin, int w, int h) {
+void CBlackHole_GPUManager::UpdateParams(const CameraParameters& cam, float mass, float spin, float time ,  int w, int h) {
     // 1. 安全检查
     if (!m_pConstantBuffer || !m_pContext) return;
 
@@ -110,10 +121,11 @@ void CBlackHole_GPUManager::UpdateParams(const CameraParameters& cam, float mass
         p->maxSteps = m_MaxSteps;
         p->width = (float)w;
         p->height = (float)h;
+        p->time = time;
         // 写入质量和自旋
         m_theBlackHole.set(mass, mass * spin);
         p->mass = m_theBlackHole.getMass();
-        p->spin = m_theBlackHole.getSpin();
+        p->spin = - m_theBlackHole.getSpin();
 
         // 6. 解除映射：告知 GPU 数据更新完毕，重新交还缓冲区的访问权给显卡驱动 
         m_pContext->Unmap(m_pConstantBuffer.Get(), 0);
@@ -121,7 +133,7 @@ void CBlackHole_GPUManager::UpdateParams(const CameraParameters& cam, float mass
 }
 
 
-void CBlackHole_GPUManager::Dispatch(int w, int h) {
+double CBlackHole_GPUManager::Dispatch(int w, int h) {
     // 1. 状态绑定
     m_pContext->CSSetShader(m_pShader.Get(), nullptr, 0);
     m_pContext->CSSetConstantBuffers(0, 1, m_pConstantBuffer.GetAddressOf());
@@ -134,11 +146,40 @@ void CBlackHole_GPUManager::Dispatch(int w, int h) {
     // 2. 输出通道
     m_pContext->CSSetUnorderedAccessViews(0, 1, m_pUAV.GetAddressOf(), nullptr);
 
+    // 起点时间戳
+    if (m_pQueryDisjoint) m_pContext->Begin(m_pQueryDisjoint.Get());
+    if (m_pQueryStart)    m_pContext->End(m_pQueryStart.Get());
+
     // 3. 激发并行
     m_pContext->Dispatch((w + 15) / 16, (h + 15) / 16, 1);
 
+    // 终点时间戳
+    if (m_pQueryEnd)      m_pContext->End(m_pQueryEnd.Get());
+    if (m_pQueryDisjoint) m_pContext->End(m_pQueryDisjoint.Get());
+
     // 4. 成果同步
     m_pContext->CopyResource(m_pStagingTex.Get(), m_pOutputTex.Get());
+
+    // 计算纯 GPU 物理渲染耗时
+    double gpuTimeMs = 0.0;
+    if (m_pQueryDisjoint && m_pQueryStart && m_pQueryEnd) {
+        D3D11_QUERY_DATA_TIMESTAMP_DISJOINT tsDisjoint;
+
+        // 阻塞等待 GPU 把时间频率数据写回 (这里反正都要等 Map，顺便等时间)
+        while (m_pContext->GetData(m_pQueryDisjoint.Get(), &tsDisjoint, sizeof(tsDisjoint), 0) == S_FALSE) {}
+
+        // 确保 GPU 时钟没有发生跨频或重置
+        if (!tsDisjoint.Disjoint) {
+            UINT64 tsStart, tsEnd;
+            while (m_pContext->GetData(m_pQueryStart.Get(), &tsStart, sizeof(tsStart), 0) == S_FALSE) {}
+            while (m_pContext->GetData(m_pQueryEnd.Get(), &tsEnd, sizeof(tsEnd), 0) == S_FALSE) {}
+
+            // 时间差(Tick数) / 频率(每秒Tick数) * 1000 = 毫秒
+            gpuTimeMs = double(tsEnd - tsStart) / double(tsDisjoint.Frequency) * 1000.0;
+        }
+    }
+
+    return gpuTimeMs; // 返回毫秒数
 }
 
 void* CBlackHole_GPUManager::MapResult(UINT& pitch) {

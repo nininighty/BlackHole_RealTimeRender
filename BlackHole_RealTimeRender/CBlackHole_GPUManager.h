@@ -10,15 +10,15 @@ using Microsoft::WRL::ComPtr;
 class CBlackHole_GPUManager {
 public:
     bool Initialize(int w, int h);
-    void UpdateParams(const CameraParameters& cam, float mass, float spin, int w, int h);
-    void Dispatch(int w, int h);
+    void UpdateParams(const CameraParameters& cam, float mass, float spin, float time, int w, int h);
+    double Dispatch(int w, int h);
     void* MapResult(UINT& rowPitch);
     void UnmapResult();
     void Release();
 
 private:
     TheBlackHole m_theBlackHole;
-    int m_MaxSteps = 600; // 步进函数最大步长
+    int m_MaxSteps = 400; // 步进函数最大步长
 
     ComPtr<ID3D11ShaderResourceView> m_pSkyboxSRV;   // HDR 纹理资源视图
     ComPtr<ID3D11SamplerState>       m_pSkyboxSampler; // 纹理采样器
@@ -34,4 +34,9 @@ private:
     ComPtr<ID3D11Texture2D>         m_pOutputTex;   // 二维纹理资源
     ComPtr<ID3D11UnorderedAccessView> m_pUAV;   // 无序访问视图
     ComPtr<ID3D11Texture2D>         m_pStagingTex;  // 暂存纹理资源
+
+    // 性能检测
+    ComPtr<ID3D11Query> m_pQueryDisjoint; // 频率与连续性查询
+    ComPtr<ID3D11Query> m_pQueryStart;    // 起点时间戳
+    ComPtr<ID3D11Query> m_pQueryEnd;      // 终点时间戳
 };

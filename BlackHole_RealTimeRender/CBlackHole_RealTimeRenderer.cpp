@@ -12,6 +12,9 @@ CBlackHole_RealTimeRenderer::CBlackHole_RealTimeRenderer(RhRdk::Realtime::ISigna
     m_currentCam.dir = ON_3dVector::ZAxis;
     m_currentCam.up = ON_3dVector::YAxis;
     m_currentCam.viewAngle = 0.8;
+    // 设置启动时间
+    m_startTime = std::chrono::high_resolution_clock::now();
+    Instrumentor::Get().BeginSession("BlackHoleRenderProfile");
 }
 
 // 析构函数，停止渲染
@@ -90,9 +93,12 @@ unsigned int CBlackHole_RealTimeRenderer::RenderProcess(void* pData) {
     const int targetFPS = 30; // 目标帧率 30 帧
     const int frameTimeMs = 1000 / targetFPS;
 
+    // FPS 统计专用变量 
+    auto fpsLastTime = std::chrono::high_resolution_clock::now();
+    int frameCount = 0;
 
     while (pR->m_bRunning) {
-        if (pR->m_bIsDirty) {
+        if (pR->m_bIsDirty || pR->m_bAnimate) {
             auto now = high_resolution_clock::now();
             auto duration = duration_cast<milliseconds>(now - lastRenderTime).count();
 
@@ -102,14 +108,17 @@ unsigned int CBlackHole_RealTimeRenderer::RenderProcess(void* pData) {
                 continue;
             }
             lastRenderTime = high_resolution_clock::now();
-            pR->m_bIsDirty = false;
+            if (pR->m_bIsDirty) pR->m_bIsDirty = false;
+            std::chrono::duration<float> runTime = now - pR->m_startTime;
+            float currentTimeF = runTime.count();
+
             // 实时获取当前 Rhino 渲染窗口的物理像素尺寸
             const ON_2iSize sz = pR->m_pRenderWnd->Size();
 
             // 1. 拷贝一份安全的相机参数与物理参数，马上释放锁，防止阻塞主线程
             CameraParameters safeCam;
             float safeMass = 1.0f;
-            float safeSpin = 0.9f;
+            float safeSpin = 0.5f;
             {
                 std::lock_guard<std::mutex> lock(pR->m_camMutex);
                 safeCam = pR->m_currentCam;
@@ -118,26 +127,62 @@ unsigned int CBlackHole_RealTimeRenderer::RenderProcess(void* pData) {
             }
 
             // 2. GPU 渲染管线
+            double pureGPUTimeMs = 0.0;
             if (pR->m_gpu.Initialize(sz.cx, sz.cy)) {
                 
-                pR->m_gpu.UpdateParams(safeCam, safeMass, safeSpin, sz.cx, sz.cy);
-                pR->m_gpu.Dispatch(sz.cx, sz.cy);
+                {
+                    // 监控上传常量的耗时
+                    PROFILE_SCOPE("GPU_UpdateParams");
+                    pR->m_gpu.UpdateParams(safeCam, safeMass, safeSpin, currentTimeF, sz.cx, sz.cy);
+                }
+                {
+                    // 监控 Compute Shader 调度的耗时
+                    PROFILE_SCOPE("GPU_Dispatch");
+                    pureGPUTimeMs = pR->m_gpu.Dispatch(sz.cx, sz.cy);
+                }
 
                 // 3. 映射结果给 Rhino
                 UINT pitch = 0;
-                void* pRaw = pR->m_gpu.MapResult(pitch);
-                // 确保GPU计算结束
-                if (pRaw) {
-                    std::lock_guard<std::mutex> lock(pR->m_bufferMutex);
-                    auto* pCh = pR->m_pRenderWnd->OpenChannel(IRhRdkRenderWindow::chanRGBA);
-                    // 确保Rhino画板正常打开
-                    if (pCh) {
-                        pCh->SetValueRect(0, 0, sz.cx, sz.cy, pitch, ComponentOrder::RGBA, pRaw);
-                        pCh->Close();
+                {
+                    // 监控从显存把画面回传给内存的耗时 (通常这是最大的性能瓶颈)
+                    PROFILE_SCOPE("GPU_MapResult");
+                    void* pRaw = pR->m_gpu.MapResult(pitch);
+
+                    // 确保GPU计算结束
+                    if (pRaw) {
+                        std::lock_guard<std::mutex> lock(pR->m_bufferMutex);
+                        auto* pCh = pR->m_pRenderWnd->OpenChannel(IRhRdkRenderWindow::chanRGBA);
+                        // 确保Rhino画板正常打开
+                        if (pCh) {
+                            pCh->SetValueRect(0, 0, sz.cx, sz.cy, pitch, ComponentOrder::RGBA, pRaw);
+                            pCh->Close();
+                        }
+                        pR->m_gpu.UnmapResult();
                     }
-                    pR->m_gpu.UnmapResult();
                 }
             }
+
+            // 统计帧率
+            frameCount++;
+            auto fpsNow = std::chrono::high_resolution_clock::now();
+            std::chrono::duration<double> fpsElapsed = fpsNow - fpsLastTime;
+
+            // 每隔 2.0 秒刷新一次帧率显示，避免疯狂刷新导致界面卡顿
+            if (fpsElapsed.count() >= 2.0) {
+                double fps = frameCount / fpsElapsed.count();
+
+                // 格式化输出字符串
+                wchar_t msg[256];
+                swprintf_s(msg, L"【黑洞引擎】 帧率: %.1f FPS | 纯GPU渲染耗时: %.2f ms\n", fps, pureGPUTimeMs);
+
+                // 将帧率实时打印到 Rhino 的主命令行提示区
+                RhinoApp().Print(msg);
+
+                // 重置计数器
+                frameCount = 0;
+                fpsLastTime = fpsNow;
+            }
+
             pR->m_pSignalUpdateInterface->SignalUpdate();
         }
         else {
