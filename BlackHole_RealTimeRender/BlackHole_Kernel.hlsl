@@ -11,10 +11,20 @@ cbuffer CameraBuffer : register(b0) {
     float2 res;
     float mass;
     float spin;
+    
+    float3 spherePos;
+    float sphereRadius;
+    float orbitSpeed;
+    float inclination;
+    int hasSphere;
+    int hasTexture;
+    float3 sphereColor;
+    float padding2;
 };  
 
 RWTexture2D<float4> OutputBuffer : register(u0); // Rhino视窗在显存中的缓存区
 Texture2D<float4> SkyboxTex : register(t0); // 背景素材
+Texture2D<float4> SphereTex : register(t1); // 绕行天体贴图
 SamplerState SkyboxSampler : register(s0);  // 背景采样规则
 static const float PI = 3.14159265;
 
@@ -124,18 +134,18 @@ float3 ACESFilm(float3 x) {
 
 float noise(float2 p) {
     float2 i = floor(p), f = frac(p);
-    float2 u = f * f * (3.0 - 2.0 * f);
     float h1 = frac(sin(dot(i + float2(0, 0), float2(127.1, 311.7))) * 43758.5453);
     float h2 = frac(sin(dot(i + float2(1, 0), float2(127.1, 311.7))) * 43758.5453);
     float h3 = frac(sin(dot(i + float2(0, 1), float2(127.1, 311.7))) * 43758.5453);
     float h4 = frac(sin(dot(i + float2(1, 1), float2(127.1, 311.7))) * 43758.5453);
+    // 平滑阶跃：埃尔米特插值多项式
+    float2 u = f * f * (3.0 - 2.0 * f);
     return lerp(lerp(h1, h2, u.x), lerp(h3, h4, u.x), u.y);
 }
 
 float fbm(float2 p) {
     float v = 0.0, a = 0.5;
-    for (int i = 0; i < 4; i++)
-    {
+    for (int i = 0; i < 2; i++) {
         v += a * noise(p);
         p *= 2.0;
         a *= 0.5;
@@ -157,7 +167,7 @@ void RenderAccretionDisk(
     float DiskThickness = 70.0; // [垂直压缩] 
     
     float CoreGlowSize = 0.65; // [高亮门槛]
-    float DopplerIntense = 2.0; // [多普勒强度]
+    float DopplerIntense = 4.0; // [多普勒强度]
     float EmissionPower = 20.0; // [全局曝光] 
     
     float RotationSpeed = 0.05; // [旋转速度倍率]
@@ -174,10 +184,9 @@ void RenderAccretionDisk(
         return;
 
     float r_plane = sqrt(pos.x * pos.x + pos.y * pos.y);
-    float angle = atan2(pos.y, pos.x);
 
     // 2. 动态开普勒旋转与坐标剪切
-    float static_shear = -(6.0 * mass) / max(r_plane, 1e-5);
+    float static_shear = -(10.0 * mass) / max(r_plane, 1e-5);
     float global_rotation = time * RotationSpeed;
     float total_rotation = static_shear - global_rotation;
     float s_shear = sin(total_rotation), c_shear = cos(total_rotation);
@@ -188,8 +197,7 @@ void RenderAccretionDisk(
     float2 warp = sheared_pos + 1.2 * float2(fbm(sheared_pos), fbm(sheared_pos + float2(5.2, 1.3)));
     // 加入三层细节：Base + Micro + Nano
     float turb = fbm(warp) * 0.6 + fbm(warp * 3.0) * 0.3 + fbm(warp * 8.0) * 0.1;
-    float spiral = (sin(3.0 * angle - r_plane * 0.5) * 0.5 + 0.5);
-    float turbulence = turb * 0.85 + spiral * 0.15;
+    float turbulence = turb ;
 
     // 4. 密度与边缘
     float macroNoise = fbm(sheared_pos * 0.08);
@@ -202,7 +210,7 @@ void RenderAccretionDisk(
 
     float density = densityZ * radialDensity * turbulence;
     // 内缘平滑开启，展示光线弯曲
-    density *= smoothstep(innerR, innerR + 0.2 * mass, r);
+   density *= smoothstep(innerR, innerR + 0.2 * mass, r);
 
     if (density <= 0.0001)
         return;
@@ -210,34 +218,30 @@ void RenderAccretionDisk(
     // 5. 相对论效应
     float3 gas_vel = normalize(float3(-pos.y, pos.x, 0.0));
     float v_mag = clamp(sqrt(mass / max(r, 1e-5)), 0.0, 0.98);
-    float g_total = (sqrt(1.0 - v_mag * v_mag) / (1.0 + dot(normalize(p_vec), gas_vel) * v_mag)) * sqrt(max(0.01, 1.0 - rs / max(r, 1e-5)));
+    float g_SR = sqrt(1.0 - v_mag * v_mag) / (1.0 + dot(normalize(p_vec), gas_vel) * v_mag);    // 狭义相对论的多普勒效应
+    float g_GR =  sqrt(max(0.01, 1.0 - rs / max(r, 1e-5))); // 广义相对论的引力红移效应
+    float g_total = g_SR * g_GR;
     
-// 6. 电影质感色彩映射
+    // 6. 电影色彩调色
     float colorWeight = radialDensity * g_total;
 
     float3 baseCol;
-    if (colorWeight < CoreGlowSize)
-    {
-    // 在边缘到中间，引入一个非线性插值，让暗部细节更丰富
-        baseCol = lerp(col_edge, col_mid, pow(colorWeight / CoreGlowSize, 1.5));
-    }
-    else
-    {
-    // 从浅金迅速过渡到冷白
+    if (colorWeight < CoreGlowSize) {
+        // 在边缘到中间，引入一个非线性插值，让暗部细节更丰富，优化pow(x,1.5)
+        float ratio = colorWeight / CoreGlowSize;
+        baseCol = lerp(col_edge, col_mid, ratio * sqrt(ratio));
+    } else {
+        // 从浅金迅速过渡到冷白
         baseCol = lerp(col_mid, col_core, (colorWeight - CoreGlowSize) / (1.0 - CoreGlowSize));
     }
     
     // 7. 最终积分：增加散射分量
     float beaming = pow(g_total, DopplerIntense);
-    // 让气体不仅自发光，还稍微带一点“环境光”的感觉
+    // 让气体不仅自发光，还稍微带一点环境光
     float3 finalCol = (baseCol * colorTint);
     diskColor += transmittance * finalCol * (density * EmissionPower * beaming) * h;
     transmittance *= exp(-density * 2.0 * h);
 }
-
-// 模块化吸积盘逻辑：无厚度 7 色彩虹平盘
-void RenderThinRainbowDisk(float3 pos_pre, float3 pos, float M, inout float3 diskColor, inout float transmittance);
-
 
 // ==========================================
 // 3. 主程序
@@ -272,11 +276,13 @@ void CSMain(uint3 id : SV_DispatchThreadID)
 
     // 初始克尔半径，之后在循环里面由RK4积分修改
     float R2 = dot(pos, pos);
-    float r2 = 0.5 * (R2 - spin * spin + sqrt(max(0.0, pow(R2 - spin * spin, 2) + 4.0 * spin * spin * pos.z * pos.z)));
+    float spin_sq = spin * spin;
+    float temp_diff = R2 - spin_sq;
+    float r2 = 0.5 * (temp_diff + sqrt(max(0.0, temp_diff * temp_diff + 4.0 * spin_sq * pos.z * pos.z)));
     float r_cur = sqrt(max(r2, 1e-8));
     
     // 预判光子的第一步步长 h_init
-    float base_h = 0.02 * r_cur;
+    float base_h = 0.04 * r_cur;
     float dynamic_max_h = max(0.25, abs(pos.z) * 0.15);
     float h_init = clamp(base_h, 0.003, dynamic_max_h);
     // 用第一步步长来进行 100% 覆盖的随机抖动
@@ -298,13 +304,24 @@ void CSMain(uint3 id : SV_DispatchThreadID)
 
         // 更新克尔半径
         R2 = dot(pos, pos);
-        r2 = 0.5 * (R2 - spin * spin + sqrt(max(0.0, pow(R2 - spin * spin, 2) + 4.0 * spin * spin * pos.z * pos.z)));
+        float spin_sq = spin * spin;
+        float temp_diff = R2 - spin_sq;
+        float r2 = 0.5 * (temp_diff + sqrt(max(0.0, temp_diff * temp_diff + 4.0 * spin_sq * pos.z * pos.z)));
         r_cur = sqrt(max(r2, 1e-8));
+        
+        // 只有当光线真正进入了吸积盘的附近时，才去执行昂贵的体积渲染
+        float r_plane2 = pos.x * pos.x + pos.y * pos.y;
+        float abs_z = abs(pos.z);
+        
+        // 预计算边界的平方值，连开方(sqrt)都省了
+        float inner_bound = (3.5 * mass) * (3.5 * mass);
+        float outer_bound = (23.0 * mass) * (23.0 * mass); 
+        float max_disk_height = 2.0 * mass; 
 
-        // 调用吸积盘渲染模块
-        RenderAccretionDisk(pos, p_vec, r_cur, h, rs, 0.05, float3(1.0, 1.0, 1.0), diskColor, transmittance);
-        // 【前期调试吸积盘尺寸用】调用彩虹薄盘渲染模块
-        //RenderThinRainbowDisk(pos_pre, pos, mass, diskColor, transmittance);
+        // 仅当光线在圆盘半径内，且高度贴近赤道面时，才渲染吸积盘
+        if (r_plane2 > inner_bound && r_plane2 < outer_bound && abs_z < max_disk_height)  {
+            RenderAccretionDisk(pos, p_vec, r_cur, h, rs, 0.05, float3(1.0, 1.0, 1.0), diskColor, transmittance);
+        }
         
         // 碰撞视界或坠入奇点
         if (r2 < rs * rs || r2 < 0.05) {
@@ -314,6 +331,60 @@ void CSMain(uint3 id : SV_DispatchThreadID)
         
         // 逃逸判定及吸积盘完全遮挡判定
         if (R2 > esc * esc || transmittance < 0.01) break;
+        
+        //  绕行天体解析求交与引力透镜贴图映射
+        if (hasSphere == 1)
+        {
+            float distToSphere = length(pos - spherePos);
+            if (distToSphere < sphereRadius)
+            {
+                hit = true;
+        
+                // 1. 计算原始法线 N
+                float3 N = normalize(pos - spherePos);
+                float3 albedo = sphereColor;
+        
+                // 2. 贴图采样：增加“潮汐锁定”坐标变换
+                if (hasTexture == 1)
+                {
+                    // --- 核心变换逻辑 ---
+                    // A. 计算球心指向黑洞中心的方向作为“前向”基准 (Forward)
+                    float3 forward = normalize(-spherePos);
+                    
+                    // B. 构造一个局部坐标系。为了防止 Forward 与 Z 轴重合导致 cross 失败，增加微小偏移
+                    float3 worldUp = abs(forward.z) < 0.99 ? float3(0, 0, 1) : float3(0, 1, 0);
+                    float3 right = normalize(cross(worldUp, forward));
+                    float3 up = cross(forward, right);
+                    
+                    // C. 将法线 N 变换到这个“始终面朝黑洞”的局部空间
+                    // 这样 localN.y 对应 Forward (指向黑洞的方向)
+                    float3 localN;
+                    localN.x = dot(N, right);
+                    localN.y = dot(N, forward);
+                    localN.z = dot(N, up);
+
+                    // D. 使用 localN 代替原始 N 进行 UV 映射
+                    // 这样你的校徽中心 (U=0.5, V=0.5) 就会锁定在 localN.y 正方向上
+                    float u_coord = 0.5 + atan2(localN.x, localN.y) / (2.0 * PI);
+                    float v_coord = 0.5 - asin(clamp(localN.z, -0.99, 0.99)) / PI;
+
+                    float3 rawTex = SphereTex.SampleLevel(SkyboxSampler, float2(u_coord, v_coord), 0).rgb;
+                    albedo = pow(rawTex, 2.2);
+                }
+        
+                // 3. 漫反射光照 (Lambertian Shading)
+                float3 L = normalize(-pos);
+                float diffuse = max(0.0, dot(N, L));
+        
+                // 混合光照：环境光增加到 0.1，让背光面更清晰
+                float3 shadedColor = albedo * (diffuse * 1.5 + 0.1);
+
+                // 4. 颜色累加与阻断
+                diskColor += transmittance * shadedColor;
+                transmittance = 0.0;
+                break;
+            }
+        }
     }
 
     // 4. 最终着色
@@ -329,55 +400,5 @@ void CSMain(uint3 id : SV_DispatchThreadID)
         // 结合吸积盘颜色与背景星空
         float3 skyColor = SkyboxTex.SampleLevel(SkyboxSampler, float2(u_coord, v_coord), 0).rgb * 1.2;
         OutputBuffer[id.xy] = float4(ACESFilm(diskColor + transmittance * skyColor), 1.0);
-    }
-}
-
-// 无厚度 7 色彩虹平盘，用来调试吸积盘大小的
-void RenderThinRainbowDisk(float3 pos_pre, float3 pos, float M, inout float3 diskColor, inout float transmittance) {
-    // 检测光线是否在当前步长内跨越了赤道面 (z = 0)
-    if (pos_pre.z * pos.z <= 0.0) {
-        // 线性插值求出光线与 z=0 平面的精确交点
-        float t = pos_pre.z / (pos_pre.z - pos.z + 1e-8);
-        float3 hitPos = lerp(pos_pre, pos, t);
-
-        // 计算交点到黑洞自转轴的距离 R
-        float R2 = hitPos.x * hitPos.x + hitPos.y * hitPos.y;
-        float R = sqrt(R2);
-
-        // 定义吸积盘的内外边缘半径
-        float innerR = 5.0 * M;
-        float outerR = 15.0 * M;
-
-        // 如果交点在吸积盘范围内
-        if (R > innerR && R < outerR) {
-            // 将半径归一化到 0~1 之间
-            float u = saturate((R - innerR) / (outerR - innerR));
-            
-            // 映射到 7 色彩虹 (红橙黄绿青蓝紫)
-            float3 color = float3(0, 0, 0);
-            // 提取到 7 个离散的色块区间
-            u = u * 7.0; // 乘以 7 得到 0~7 的区间
-            int idx = clamp(floor(u), 0, 6); // 限制在 0-6 范围内，防止越界
-            
-            // 直接赋纯色，不使用 lerp 插值
-            if (idx == 0)
-                color = float3(1.0, 0.0, 0.0); // 红
-            else if (idx == 1)
-                color = float3(1.0, 0.5, 0.0); // 橙
-            else if (idx == 2)
-                color = float3(1.0, 1.0, 0.0); // 黄
-            else if (idx == 3)
-                color = float3(0.0, 1.0, 0.0); // 绿
-            else if (idx == 4)
-                color = float3(0.0, 1.0, 1.0); // 青
-            else if (idx == 5)
-                color = float3(0.0, 0.0, 1.0); // 蓝
-            else
-                color = float3(0.5, 0.0, 1.0); // 紫
-
-            // 不透明的实体盘，直接叠加颜色并阻断后续光线
-            diskColor += transmittance * color * 1.5;
-            transmittance = 0.0;
-        }
     }
 }

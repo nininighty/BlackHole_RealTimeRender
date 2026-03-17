@@ -60,6 +60,9 @@
     <ClCompile Include="cmdSetBlackHoleParams.cpp">
       <Filter>__MySourceFiles__</Filter>
     </ClCompile>
+    <ClCompile Include="cmdSetBlackHoleOrbitSphere.cpp">
+      <Filter>__MySourceFiles__</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BlackHole_RealTimeRenderApp.h">
@@ -116,6 +119,9 @@
     <ClInclude Include="cmdSetBlackHoleParams.h">
       <Filter>___MyHeaders__</Filter>
     </ClInclude>
+    <ClInclude Include="cmdSetBlackHoleOrbitSphere.h">
+      <Filter>___MyHeaders__</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="BlackHole_RealTimeRender.def">
@@ -124,6 +130,7 @@
     <None Include="res\BlackHole_RealTimeRender.rc2">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="C:\Users\12049\Downloads\nebula-1.hdr" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="BlackHole_RealTimeRender.rc">

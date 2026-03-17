@@ -1,9 +1,10 @@
 //{{NO_DEPENDENCIES}}
-// Microsoft Visual C++ generated include file.
-// Used by BlackHole_RealTimeRender.rc
+// Microsoft Visual C++ 生成的包含文件。
+// 供 BlackHole_RealTimeRender.rc 使用
 //
 #define IDI_ICON                        100
 #define IDM_APP_FILE_SAVE_AS            101
+#define IDR_HDR_IMAGE1                  1010
 #define IDM_APP_EDIT_COPY               102
 #define IDM_APP_FILE_PRINT              103
 #define IDM_APP_FILE_EXIT               104
@@ -32,13 +33,12 @@
 #define ID_APP_VIEW_IN10X               32796
 
 // Next default values for new objects
-//
+// 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-
-#define _APS_NEXT_RESOURCE_VALUE	[!output START_RES]
-#define _APS_NEXT_CONTROL_VALUE		[!output START_RES]
-#define _APS_NEXT_SYMED_VALUE		[!output START_RES]
-#define _APS_NEXT_COMMAND_VALUE		32771
+#define _APS_NEXT_RESOURCE_VALUE        102
+#define _APS_NEXT_COMMAND_VALUE         32771
+#define _APS_NEXT_CONTROL_VALUE         1000
+#define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

@@ -1,6 +1,7 @@
 // CBlackHole_GPUManager.cpp
 #include "stdafx.h"
 #define STB_IMAGE_IMPLEMENTATION
+#include "Resource.h"
 #include "stb_image.h"
 #include "BlackHole_Kernel.h"
 #include "CBlackHole_GPUManager.h"
@@ -31,10 +32,46 @@ bool CBlackHole_GPUManager::Initialize(int w, int h) {
         D3D11_BUFFER_DESC cbDesc = { sizeof(GPU_Buffer_Data), D3D11_USAGE_DYNAMIC, D3D11_BIND_CONSTANT_BUFFER, D3D11_CPU_ACCESS_WRITE, 0, 0 };
         if (FAILED(m_pDevice->CreateBuffer(&cbDesc, nullptr, &m_pConstantBuffer))) return false;
 
-        // 【临时代码】加载本地HDR星空贴图 
-        int width, height, channels;
-        float* data = stbi_loadf("D:\\Code\\CPP\\SJU RhinoBlackHole\\BlackHoleRealTimeRender\\BlackHole_RealTimeRender\\BlackHole_RealTimeRender\\res\\nebula-1.hdr", 
-            & width, &height, &channels, 4);    // 强制转换成 RGBA 四通道
+        // 内存直读 HDR 星空贴图
+        int width = 0, height = 0, channels = 0;
+        float* data = nullptr;
+
+        // 通过静态局部变量的内存地址，精准反查本插件 DLL 的真实句柄
+        HMODULE hInst = NULL;
+        static int s_dummy = 0; // 声明一个哑变量，它永远驻留在当前 DLL 的数据段中
+        ::GetModuleHandleEx(
+            GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+            reinterpret_cast<LPCWSTR>(&s_dummy),
+            &hInst
+        );
+
+        // 查找资源，RT_RCDATA 表示这块资源是纯数据。
+        HRSRC hResInfo = ::FindResource(hInst, MAKEINTRESOURCE(IDR_HDR_IMAGE1), L"HDR_IMAGE");
+
+        if (hResInfo == nullptr) {
+            RhinoApp().Print(L"【HDR】FindResource 失败，资源找不到\n");
+        }
+        else {
+            HGLOBAL hResData = ::LoadResource(hInst, hResInfo);
+            DWORD dataSize = ::SizeofResource(hInst, hResInfo);
+            const unsigned char* pData = static_cast<const unsigned char*>(::LockResource(hResData));
+
+            wchar_t msg[256];
+            swprintf_s(msg, L"【HDR】资源找到，大小: %d bytes\n", dataSize);
+            RhinoApp().Print(msg);
+
+            if (pData != nullptr && dataSize > 0) {
+                data = stbi_loadf_from_memory(pData, static_cast<int>(dataSize), &width, &height, &channels, 4);
+                if (data == nullptr) {
+                    RhinoApp().Print(L"【HDR】stbi 解码失败\n");
+                }
+                else {
+                    swprintf_s(msg, L"【HDR】解码成功，尺寸: %d x %d\n", width, height);
+                    RhinoApp().Print(msg);
+                }
+            }
+        }
+
         if (data) {
             D3D11_TEXTURE2D_DESC texDescHDR = {};
             texDescHDR.Width = width;
@@ -93,13 +130,27 @@ bool CBlackHole_GPUManager::Initialize(int w, int h) {
     texDesc.Usage = D3D11_USAGE_STAGING;
     texDesc.BindFlags = 0;
     texDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-    m_pDevice->CreateTexture2D(&texDesc, nullptr, &m_pStagingTex);
+    // 清理旧缓冲，重新分配3个暂存纹理
+    m_pStagingTextures.clear();
+    for (int i = 0; i < 3; ++i) {
+        Microsoft::WRL::ComPtr<ID3D11Texture2D> stagingTex;
+        m_pDevice->CreateTexture2D(&texDesc, nullptr, &stagingTex);
+        m_pStagingTextures.push_back(stagingTex);
+    }
+    m_writeIndex = 0;
+    m_frameCount = 0;
 
     return true;
 }
 
 // 将 CPU 端实时捕获的相机动态数据，同步给 GPU 的物理计算单元。
-void CBlackHole_GPUManager::UpdateParams(const CameraParameters& cam, float mass, float spin, float time ,  int w, int h) {
+void CBlackHole_GPUManager::UpdateParams(
+    const CameraParameters& cam, 
+    float mass, float spin, float time, int w, int h, 
+    const OrbitSphereParameters& sphereParams, 
+    const ON_3dPoint& currentSpherePos)
+{
+    PROFILE_SCOPE("GPU_UpdateParams");
     // 1. 安全检查
     if (!m_pConstantBuffer || !m_pContext) return;
 
@@ -122,10 +173,35 @@ void CBlackHole_GPUManager::UpdateParams(const CameraParameters& cam, float mass
         p->width = (float)w;
         p->height = (float)h;
         p->time = time;
+
         // 写入质量和自旋
         m_theBlackHole.set(mass, mass * spin);
         p->mass = m_theBlackHole.getMass();
         p->spin = - m_theBlackHole.getSpin();
+
+        // 写入天体数据
+        const wchar_t* rawPath = sphereParams.texturePath.Array();
+        std::wstring newTexPath = rawPath ? rawPath : L""; // 拦截空指针，如果是 nullptr 则赋予空字符串 L""
+
+        if (sphereParams.active && newTexPath != m_currentSphereTexPath) {
+            LoadSphereTexture(newTexPath);
+            m_currentSphereTexPath = newTexPath;
+        }
+        p->spherePos[0] = static_cast<float>(currentSpherePos.x);
+        p->spherePos[1] = static_cast<float>(currentSpherePos.y);
+        p->spherePos[2] = static_cast<float>(currentSpherePos.z);
+        p->sphereRadius = static_cast<float>(sphereParams.radius);
+        p->orbitSpeed = static_cast<float>(sphereParams.orbitSpeed);
+        p->inclination = static_cast<float>(sphereParams.inclination);
+
+        p->hasSphere = sphereParams.active ? 1 : 0;
+        p->hasTexture = (m_pSphereSRV != nullptr) ? 1 : 0; // 如果贴图生成成功，告诉显卡用贴图
+
+        // 将 ON_Color (0-255) 转换为 (0.0-1.0) 传给着色器
+        p->sphereColor[0] = static_cast<float>(sphereParams.baseColor.FractionRed());
+        p->sphereColor[1] = static_cast<float>(sphereParams.baseColor.FractionGreen());
+        p->sphereColor[2] = static_cast<float>(sphereParams.baseColor.FractionBlue());
+        p->padding2 = 0.0f;
 
         // 6. 解除映射：告知 GPU 数据更新完毕，重新交还缓冲区的访问权给显卡驱动 
         m_pContext->Unmap(m_pConstantBuffer.Get(), 0);
@@ -134,67 +210,122 @@ void CBlackHole_GPUManager::UpdateParams(const CameraParameters& cam, float mass
 
 
 double CBlackHole_GPUManager::Dispatch(int w, int h) {
-    // 1. 状态绑定
-    m_pContext->CSSetShader(m_pShader.Get(), nullptr, 0);
-    m_pContext->CSSetConstantBuffers(0, 1, m_pConstantBuffer.GetAddressOf());
-
-    if (m_pSkyboxSRV && m_pSkyboxSampler) {
-        m_pContext->CSSetShaderResources(0, 1, m_pSkyboxSRV.GetAddressOf());
-        m_pContext->CSSetSamplers(0, 1, m_pSkyboxSampler.GetAddressOf());
-    }
-
-    // 2. 输出通道
-    m_pContext->CSSetUnorderedAccessViews(0, 1, m_pUAV.GetAddressOf(), nullptr);
-
-    // 起点时间戳
-    if (m_pQueryDisjoint) m_pContext->Begin(m_pQueryDisjoint.Get());
-    if (m_pQueryStart)    m_pContext->End(m_pQueryStart.Get());
-
-    // 3. 激发并行
-    m_pContext->Dispatch((w + 15) / 16, (h + 15) / 16, 1);
-
-    // 终点时间戳
-    if (m_pQueryEnd)      m_pContext->End(m_pQueryEnd.Get());
-    if (m_pQueryDisjoint) m_pContext->End(m_pQueryDisjoint.Get());
-
-    // 4. 成果同步
-    m_pContext->CopyResource(m_pStagingTex.Get(), m_pOutputTex.Get());
-
-    // 计算纯 GPU 物理渲染耗时
-    double gpuTimeMs = 0.0;
-    if (m_pQueryDisjoint && m_pQueryStart && m_pQueryEnd) {
+    PROFILE_SCOPE("GPU_Dispatch_CPU");
+    // 在开启新一轮的 Query 覆盖记录前，先读取上一帧的耗时
+    if (m_frameCount > 0 && m_pQueryDisjoint) {
         D3D11_QUERY_DATA_TIMESTAMP_DISJOINT tsDisjoint;
-
-        // 阻塞等待 GPU 把时间频率数据写回 (这里反正都要等 Map，顺便等时间)
-        while (m_pContext->GetData(m_pQueryDisjoint.Get(), &tsDisjoint, sizeof(tsDisjoint), 0) == S_FALSE) {}
-
-        // 确保 GPU 时钟没有发生跨频或重置
-        if (!tsDisjoint.Disjoint) {
-            UINT64 tsStart, tsEnd;
-            while (m_pContext->GetData(m_pQueryStart.Get(), &tsStart, sizeof(tsStart), 0) == S_FALSE) {}
-            while (m_pContext->GetData(m_pQueryEnd.Get(), &tsEnd, sizeof(tsEnd), 0) == S_FALSE) {}
-
-            // 时间差(Tick数) / 频率(每秒Tick数) * 1000 = 毫秒
-            gpuTimeMs = double(tsEnd - tsStart) / double(tsDisjoint.Frequency) * 1000.0;
+        if (m_pContext->GetData(m_pQueryDisjoint.Get(), &tsDisjoint, sizeof(tsDisjoint), 0) == S_OK) {
+            if (!tsDisjoint.Disjoint) {
+                UINT64 tsStart = 0, tsEnd = 0;
+                if (m_pContext->GetData(m_pQueryStart.Get(), &tsStart, sizeof(tsStart), 0) == S_OK &&
+                    m_pContext->GetData(m_pQueryEnd.Get(), &tsEnd, sizeof(tsEnd), 0) == S_OK) {
+                    m_lastGpuTimeMs = double(tsEnd - tsStart) / double(tsDisjoint.Frequency) * 1000.0;
+                }
+            }
         }
     }
 
-    return gpuTimeMs; // 返回毫秒数
+    // 1. 绑定资源
+    m_pContext->CSSetShader(m_pShader.Get(), nullptr, 0);
+    m_pContext->CSSetConstantBuffers(0, 1, m_pConstantBuffer.GetAddressOf());
+    m_pContext->CSSetUnorderedAccessViews(0, 1, m_pUAV.GetAddressOf(), nullptr);
+    if (m_pSkyboxSRV) m_pContext->CSSetShaderResources(0, 1, m_pSkyboxSRV.GetAddressOf());
+    if (m_pSphereSRV) m_pContext->CSSetShaderResources(1, 1, m_pSphereSRV.GetAddressOf());
+    if (m_pSkyboxSampler) m_pContext->CSSetSamplers(0, 1, m_pSkyboxSampler.GetAddressOf());
+
+    // 2. 性能打点
+    if (m_pQueryDisjoint) {
+        m_pContext->Begin(m_pQueryDisjoint.Get());
+        m_pContext->End(m_pQueryStart.Get());
+    }
+
+    // 3. 并行计算
+    m_pContext->Dispatch((w + 15) / 16, (h + 15) / 16, 1);
+
+    // 4. 结束打点并拷贝结果
+    if (m_pQueryDisjoint) {
+        m_pContext->End(m_pQueryEnd.Get());
+        m_pContext->End(m_pQueryDisjoint.Get());
+    }
+
+    // 拷贝到当前写的暂存缓冲，并移动指针
+    {
+        PROFILE_SCOPE("GPU_CopyResource");
+
+        m_pContext->CopyResource(
+            m_pStagingTextures[m_writeIndex].Get(),
+            m_pOutputTex.Get());
+    }
+    m_writeIndex = (m_writeIndex + 1) % 3;
+    m_frameCount++;
+
+    // 直接返回缓存的上一帧时间即可
+    return m_lastGpuTimeMs;
 }
 
 void* CBlackHole_GPUManager::MapResult(UINT& pitch) {
-    // 1. 定义映射资源结构体
+    PROFILE_SCOPE("GPU_MapResult");
+    // 至少跑了3帧再开始读，防止启动时读到空资源
+    if (m_frameCount < 3) return nullptr;
+
+    // 读取刚刚 Dispatch 完并 CopyResource 进去的那一帧
+    int readIndex = (m_writeIndex + 2) % 3;
+    m_lastReadIndex = readIndex;
+
     D3D11_MAPPED_SUBRESOURCE ms;
+    // GPU 不算完，CPU 就在这睡着
+    HRESULT hr = m_pContext->Map(m_pStagingTextures[readIndex].Get(), 0, D3D11_MAP_READ, 0, &ms);
 
-    // 2. 锁定并映射资源
-    if (SUCCEEDED(m_pContext->Map(m_pStagingTex.Get(), 0, D3D11_MAP_READ, 0, &ms))) {
-
-        // 3. 传出行跨度并返回首地址
+    if (hr == S_OK) {
         pitch = ms.RowPitch;
         return ms.pData;
     }
-    // 映射失败
     return nullptr;
 }
 
-void CBlackHole_GPUManager::UnmapResult() { m_pContext->Unmap(m_pStagingTex.Get(), 0); }
+void CBlackHole_GPUManager::UnmapResult() {
+    // 解绑刚才读的那一帧
+    int readIndex = m_lastReadIndex;
+    m_pContext->Unmap(m_pStagingTextures[readIndex].Get(), 0);
+}
+
+// --- 新增：动态读取 Rhino 传来的贴图路径 ---
+bool CBlackHole_GPUManager::LoadSphereTexture(const std::wstring& path) {
+    if (!m_pDevice) return false;
+
+    // 清空旧的贴图资源
+    m_pSphereSRV.Reset();
+    if (path.empty()) return false;
+
+    // 将宽字符的 Rhino 路径转换为 UTF-8，stb_image 才能正确读取中文路径
+    ON_String utf8Path(path.c_str());
+
+    int s_width, s_height, s_channels;
+    // 使用 stbi_load (非 f)，因为 Rhino 里的大部分贴图是 jpg/png，不需要 hdr
+    unsigned char* s_data = stbi_load(utf8Path.Array(), &s_width, &s_height, &s_channels, 4);
+
+    if (s_data) {
+        D3D11_TEXTURE2D_DESC texDesc = {};
+        texDesc.Width = s_width;
+        texDesc.Height = s_height;
+        texDesc.MipLevels = 1;
+        texDesc.ArraySize = 1;
+        // 普通 8-bit 图片用 UNORM 格式
+        texDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        texDesc.SampleDesc.Count = 1;
+        texDesc.Usage = D3D11_USAGE_IMMUTABLE;
+        texDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+
+        D3D11_SUBRESOURCE_DATA initData = {};
+        initData.pSysMem = s_data;
+        initData.SysMemPitch = s_width * 4; // 每个像素 4 字节 (RGBA)
+
+        ComPtr<ID3D11Texture2D> pTex;
+        if (SUCCEEDED(m_pDevice->CreateTexture2D(&texDesc, &initData, &pTex))) {
+            m_pDevice->CreateShaderResourceView(pTex.Get(), nullptr, &m_pSphereSRV);
+        }
+        stbi_image_free(s_data);
+        return true;
+    }
+    return false;
+}

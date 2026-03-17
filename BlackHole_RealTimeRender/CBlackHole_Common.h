@@ -13,7 +13,25 @@ struct GPU_Buffer_Data {
     float camPos[3];    float maxSteps;      // 相机坐标 + 步数
     float camDir[3];    float time;      // 面朝方向+时间戳
     float camUp[3];     float fov;       // 上方向量 + fov，16字节
-    float width;        float height;    float mass;  float spin; 
+    float width;        float height;    float mass;  float spin;   // 屏幕宽高 ， 黑洞质量和自旋系数
+
+    // 绕行天体参数
+    float spherePos[3]; float sphereRadius;  // 初始球心坐标 + 半径
+    float orbitSpeed;   float inclination;   int hasSphere; int hasTexture;// 速度 + 倾角(弧度) + 存在标记 + 贴图标记
+    float sphereColor[3]; float padding2;     // 16字节：材质 RGB 颜色 + 占位符
+};
+
+// 后台逻辑使用的绕行天体参数
+struct OrbitSphereParameters {
+    bool        active = false;
+    ON_UUID     objectId = ON_nil_uuid;
+    ON_3dPoint  initialCenter;
+    double      radius = 0.0;
+    double      orbitSpeed = 0.25;
+    double      inclination = 0.0;
+
+    ON_Color    baseColor = ON_Color(255, 255, 255); // 默认纯白
+    ON_wString  texturePath = L"";                   // 贴图绝对路径
 };
 
 // 后台逻辑使用的相机参数

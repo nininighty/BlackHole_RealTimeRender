@@ -22,6 +22,7 @@
     <ClCompile Include="BlackHole_RealTimeRenderMaterial.cpp" />
     <ClCompile Include="BlackHole_RealTimeRenderMaterialSection.cpp" />
     <ClCompile Include="BlackHole_RealTimeRenderSdkRender.cpp" />
+    <ClCompile Include="cmdSetBlackHoleOrbitSphere.cpp" />
     <ClCompile Include="cmdSetBlackHoleParams.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
@@ -42,6 +43,7 @@
     <ClInclude Include="CBlackHole_GPUManager.h" />
     <ClInclude Include="CBlackHole_RealTimeRenderer.h" />
     <ClInclude Include="CBlackHole_TheBlackHole.h" />
+    <ClInclude Include="cmdSetBlackHoleOrbitSphere.h" />
     <ClInclude Include="cmdSetBlackHoleParams.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="stb_image.h" />
@@ -50,6 +52,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="BlackHole_RealTimeRender.def" />
+    <None Include="C:\Users\12049\Downloads\nebula-1.hdr" />
     <None Include="res\BlackHole_RealTimeRender.rc2" />
   </ItemGroup>
   <ItemGroup>

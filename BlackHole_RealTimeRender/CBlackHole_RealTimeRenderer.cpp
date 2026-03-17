@@ -28,7 +28,7 @@ bool CBlackHole_RealTimeRenderer::StartRenderProcess(const ON_2iSize& frameSize)
     if (nullptr == m_pRenderWnd) m_pRenderWnd = IRhRdkRenderWindow::New();
     if (m_pRenderWnd) {
         m_pRenderWnd->SetSize(frameSize);
-        m_pRenderWnd->EnsureDib();  // 申请内存上一片屏幕大小的空间存储DIB（设备无关位图），这个方案已经废弃，实际上没用
+        m_pRenderWnd->PreAllocateChannel(IRhRdkRenderWindow::chanRGBA); //在主线程提前分配 RGBA 通道内存
     }
     // 建立一个CwinThread负责协调CPU和GPU
     if (nullptr == m_pRenderThread) {
@@ -78,8 +78,6 @@ void CBlackHole_RealTimeRenderer::UpdateCamera(const ON_Viewport& vp) {
         m_currentCam.viewAngle = newFov;
 
         m_bIsDirty = true;
-        //当程序执行到这里，变量 lock 离开了它的作用域。
-        // 此时，C++ 会自动调用 lock 的析构函数，并在析构函数里自动执行 m_camMutex.unlock()
     }
 }
 
@@ -98,6 +96,7 @@ unsigned int CBlackHole_RealTimeRenderer::RenderProcess(void* pData) {
     int frameCount = 0;
 
     while (pR->m_bRunning) {
+        PROFILE_SCOPE("RenderProcess1 :: Frame");
         if (pR->m_bIsDirty || pR->m_bAnimate) {
             auto now = high_resolution_clock::now();
             auto duration = duration_cast<milliseconds>(now - lastRenderTime).count();
@@ -119,44 +118,74 @@ unsigned int CBlackHole_RealTimeRenderer::RenderProcess(void* pData) {
             CameraParameters safeCam;
             float safeMass = 1.0f;
             float safeSpin = 0.5f;
+            OrbitSphereParameters safeSphere; // 球体参数缓存
             {
                 std::lock_guard<std::mutex> lock(pR->m_camMutex);
                 safeCam = pR->m_currentCam;
                 safeMass = pR->m_targetMass;  
                 safeSpin = pR->m_targetSpin; 
             }
+            // 加锁并拷贝天体数据
+            {
+                std::lock_guard<std::mutex> lockSphere(pR->m_sphereMutex);
+                safeSphere = pR->m_targetSphere;
+            }
+            ON_3dPoint currentSpherePos = safeSphere.initialCenter;
+            if (safeSphere.active) {
+                double R = safeSphere.initialCenter.DistanceTo(ON_3dPoint::Origin);
+                //  使用 Y 和 X 计算初始赤道面夹角
+                double init_angle = std::atan2(safeSphere.initialCenter.y, safeSphere.initialCenter.x);
+                double current_angle = init_angle + currentTimeF * safeSphere.orbitSpeed;
 
-            // 2. GPU 渲染管线
+                double x_prime = R * std::cos(current_angle);
+                double y_prime = R * std::sin(current_angle);
+
+                double s_inc = std::sin(safeSphere.inclination);
+                double c_inc = std::cos(safeSphere.inclination);
+
+                // 应用轨道倾角，产生 Z 轴方向的高度变化
+                currentSpherePos = ON_3dPoint(x_prime, y_prime * c_inc, y_prime * s_inc);
+            }
+
+            // 3. GPU 渲染管线
             double pureGPUTimeMs = 0.0;
             if (pR->m_gpu.Initialize(sz.cx, sz.cy)) {
                 
                 {
                     // 监控上传常量的耗时
-                    PROFILE_SCOPE("GPU_UpdateParams");
-                    pR->m_gpu.UpdateParams(safeCam, safeMass, safeSpin, currentTimeF, sz.cx, sz.cy);
+                    PROFILE_SCOPE("RenderProcess2 :: GPU_UpdateParams");
+                    pR->m_gpu.UpdateParams(safeCam, safeMass, safeSpin, currentTimeF, sz.cx, sz.cy, safeSphere, currentSpherePos);
                 }
                 {
                     // 监控 Compute Shader 调度的耗时
-                    PROFILE_SCOPE("GPU_Dispatch");
+                    PROFILE_SCOPE("RenderProcess2 :: GPU_Dispatch");
                     pureGPUTimeMs = pR->m_gpu.Dispatch(sz.cx, sz.cy);
                 }
 
                 // 3. 映射结果给 Rhino
                 UINT pitch = 0;
                 {
-                    // 监控从显存把画面回传给内存的耗时 (通常这是最大的性能瓶颈)
-                    PROFILE_SCOPE("GPU_MapResult");
+                    // 监控从显存把画面回传给内存的耗时
+                    PROFILE_SCOPE("RenderProcess3 :: GPU_MapResult");
                     void* pRaw = pR->m_gpu.MapResult(pitch);
 
                     // 确保GPU计算结束
                     if (pRaw) {
-                        std::lock_guard<std::mutex> lock(pR->m_bufferMutex);
-                        auto* pCh = pR->m_pRenderWnd->OpenChannel(IRhRdkRenderWindow::chanRGBA);
-                        // 确保Rhino画板正常打开
-                        if (pCh) {
-                            pCh->SetValueRect(0, 0, sz.cx, sz.cy, pitch, ComponentOrder::RGBA, pRaw);
-                            pCh->Close();
+                            std::lock_guard<std::mutex> lock(pR->m_bufferMutex);
+                        {
+                            PROFILE_SCOPE("RenderProcess3 :: GPU_MapResult :: OpenChannel + SetValueRect + CloseChannel");
+                            auto* pCh = pR->m_pRenderWnd->OpenChannel(IRhRdkRenderWindow::chanRGBA);
+                            // 确保Rhino画板正常打开
+                            if (pCh) {
+                                PROFILE_SCOPE("RenderProcess3 :: GPU_MapResult :: SetValueRect");
+                                pCh->SetValueRect(0, 0, sz.cx, sz.cy, pitch, ComponentOrder::RGBA, pRaw);
+                                {
+                                    PROFILE_SCOPE("RenderProcess3 :: GPU_MapResult :: CloseChannel");
+                                    pCh->Close();
+                                }
+                            }
                         }
+                        PROFILE_SCOPE("RenderProcess3 :: GPU_MapResult :: UnmapResult");
                         pR->m_gpu.UnmapResult();
                     }
                 }
@@ -202,4 +231,11 @@ void CBlackHole_RealTimeRenderer::UpdatePhysicsParams(double mass, double spin) 
     if (spin >= 0.0) m_targetSpin = static_cast<float>(spin);
 
     m_bIsDirty = true; // 标记脏数据，唤醒后台线程重新计算画面
+}
+
+// 更新天体
+void CBlackHole_RealTimeRenderer::UpdateOrbitSphere(const OrbitSphereParameters& params) {
+    std::lock_guard<std::mutex> lock(m_sphereMutex);
+    m_targetSphere = params;
+    m_bIsDirty = true; // 唤醒后台线程重新计算画面
 }
